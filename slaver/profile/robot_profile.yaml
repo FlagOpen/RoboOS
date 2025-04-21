@@ -1,0 +1,21 @@
+imports:
+ - "tools.robotic_tools"
+
+
+robot_name: "robot_1"
+robot_type: "realman_single"
+robot_tool: 
+  navigate_to_where:
+    class: "Navigate"
+  # detect_object:
+  #   class: "DetectObject"
+  grasp_object:
+    class: "GraspObject"
+  place_to_where:
+    class: "PlaceWhere"
+current_position: "initialPosition"
+navigate_position:
+  - "initialPosition"
+  - "customTable"
+  - "kitchenTable"
+  - "servingTable"

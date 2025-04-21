@@ -1,0 +1,71 @@
+# Audio Model Parameters
+audio:
+  SAMPLE_RATE: 16000                                    # Whisper supports 16kHz by default
+  CHANNELS: 1                                           # Number of audio channels (1 for mono, 2 for stereo)
+  DURATION: 5                                           # Recording duration in seconds
+  EXCEED_TIME: 20                                       # Max recording time in seconds
+  THRESHOLD: 2000                                       # Silence threshold (lower is more sensitive)
+  SILENCE_DURATION: 5                                   # Duration of silence to end recording, in seconds
+  AUDIO_RECORD_ENABLE: false                            # Enable audio recording
+  AUDIO_FILE_PATH: "./tmp_audio.wav"                    # Path to save the recorded audio file
+
+# TTS Speaker Parameters
+tts:
+  TTS_SPEAK_ENABLE: false                               # Enable TTS speaker
+  TTS_RAMDOM_SEED: 1924                                 # Random seed for TTS
+  TTS_OUTPUT_FILE: "./tts_audio.wav"                    # Path to save the TTS output audio file
+
+# Cloud Server Infos
+model:
+  MODEL_SELECT: "robobrain"                             # Model name for the cloud server
+  MODEL_RETRY_PLANNING: 5                               # Number of retries for planning
+  MODEL_LIST:
+    - CLOUD_MODEL: "robobrain"                          # Model name for the cloud server
+      CLOUD_TYPE: "default"                             # Deploy for the cloud server
+      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+    - CLOUD_MODEL: "deepseekv3"                         # Model name for the cloud server
+      CLOUD_TYPE: "default"                             # Deploy for the cloud server
+      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+    - CLOUD_MODEL: "gemini"                             # Model name for the cloud server
+      CLOUD_TYPE: "azure"                               # Deploy for the cloud server
+      AZURE_ENDPOINT: "YOUR-ENDPOINT"                   # Azure endpoint for the cloud server
+      AZURE_DEPLOYMENT: "YOUR_DEPLOYMENT"               # Azure deployment name for the cloud server
+      AZURE_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      AZURE_API_VERSION: "YOUR-API-VERSION"             # API version for the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+
+# Tool Parameters for mocking
+tool:
+  DISABLE_ARM: true                                     # Disable arm tool for mocking
+  DISABLE_CAMERA: true                                  # Disable camera tool for mocking
+  DISABLE_CHASSIS: true                                 # Disable chassis tool for mocking
+
+# Communicator Parameters
+communicator:
+  HOST: "127.0.0.1"                                     # Hostname or IP address of the server
+  PORT: 6379                                            # Port number of the server
+  DB: 0                                                 # database number
+  CLEAR: true                                           # Whether clear the database on startup
+  PASSWORD: ""                                          # Password for server
+
+# profile Parameters
+profile:
+  ROBOT_PROFILE_PATH: "./profile/robot_profile.yaml"    # Path to the robot profile file
+  ROBOT_PROFILE_ENABLE: false                           # Whether enable loading robot profile as initialization
+  SCENE_PROFILE_PATH: "./profile/scene_profile.yaml"    # Path to the scene profile file
+  SCENE_PROFILE_ENABLE: true                            # Whether enable loading scene profile as initialization
+
+# Logging Parameters
+logger:
+  MASTER_LOGGER_NAME: "GlobalAgent"                     # Name of the master logger
+  MASTER_LOGGER_LEVEL: "DEBUG"                          # Log level for task logger
+  MASTER_LOGGER_FILE: "./.logs/master_agent.log"        # Path to save the task log file
+  ROBOT_MEMORY_YAML: "./.log/robot_memory.yaml"         # Path to save the robot memory file
+  SCENE_MEMORY_YAML: "./.log/scene_memory.yaml"         # Path to save the scene memory file

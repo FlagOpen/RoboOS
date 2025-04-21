@@ -1,0 +1,46 @@
+
+tool:
+  DISABLE_ARM: true                                     # Disable arm tool
+  DISABLE_CAMERA: true                                  # Disable camera tool
+  DISABLE_CHASSIS: true                                 # Disable chassis tool
+  ERROR_PROBABILITY: 0                                  # Probability of error in tool execution
+
+model:
+  MODEL_SELECT: "robobrain"                             # Model name for the cloud server
+  MODEL_RETRY_PLANNING: 5                               # Number of retries for planning
+  MODEL_LIST:
+    - CLOUD_MODEL: "robobrain"                          # Model name for the cloud server
+      CLOUD_TYPE: "default"                             # Deploy for the cloud server
+      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+    - CLOUD_MODEL: "deepseekv3"                         # Model name for the cloud server
+      CLOUD_TYPE: "default"                             # Deploy for the cloud server
+      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+    - CLOUD_MODEL: "gemini"                             # Model name for the cloud server
+      CLOUD_TYPE: "azure"                               # Deploy for the cloud server
+      AZURE_ENDPOINT: "YOUR-ENDPOINT"                   # Azure endpoint for the cloud server
+      AZURE_DEPLOYMENT: "YOUR_DEPLOYMENT"               # Azure deployment name for the cloud server
+      AZURE_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
+      AZURE_API_VERSION: "YOUR-API-VERSION"             # API version for the cloud server
+      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+
+
+
+communicator:
+  HOST: "127.0.0.1"                                   # Hostname or IP address of the server
+  PORT: 6379                                          # Port number of the server
+  DB: 0                                               # database number
+  CLEAR: false                                        # Whether clear the database on startup
+  PASSWORD: ""                                        # Password for server
+
+
+camera:
+  IMAGE_PATH: "./images/"
+
+profile:
+  PATH: "./profile/robot_profile.yaml"
