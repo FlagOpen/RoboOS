@@ -7,7 +7,7 @@ import threading
 from collections import defaultdict
 from typing import Dict, Tuple
 from agents.planner import GlobalTaskPlanner
-from flag_scale.communication import Communicator
+from flag_scale.flagscale.agent.communication import Communicator
 
 
 class GlobalAgent:

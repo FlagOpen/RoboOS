@@ -1,5 +1,5 @@
 import yaml
-from flag_scale.communication import Communicator
+from flag_scale.flagscale.agent.communication import Communicator
 
 
 def convert_yaml_to_json(yaml_path: str):
