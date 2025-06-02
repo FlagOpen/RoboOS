@@ -354,6 +354,7 @@ class Model:
         for attribute in [
             "custom_role_conversion",
             "temperature",
+            "top_p",
             "max_tokens",
             "provider",
             "timeout",
@@ -467,7 +468,8 @@ class VLLMModel(Model):
         sampling_params = SamplingParams(
             n=kwargs.get("n", 1),
             temperature=kwargs.get("temperature", 0.0),
-            max_tokens=kwargs.get("max_tokens", 2048),
+            top_p=kwargs.get("top_p", 0.0),
+            max_tokens=kwargs.get("max_tokens", 8192),
             stop=prepared_stop_sequences,
         )
 

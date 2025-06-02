@@ -112,7 +112,8 @@ class GlobalTaskPlanner:
         response = self.global_model.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            temperature=0.7,
+            temperature=0.0,
+            top_p=0.0,
             max_tokens=8192,
         )
         return response.choices[0].message.content
