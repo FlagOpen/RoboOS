@@ -259,7 +259,7 @@ class MultiStepAgent:
         self.tools.setdefault("final_answer", FinalAnswerTool())
 
     def _validate_tools_and_managed_agents(self, tools, managed_agents):
-        tool_and_managed_agent_names = [tool.name for tool in tools]
+        tool_and_managed_agent_names = [tool['function']['name'] for tool in tools if isinstance(tool, dict) and 'function' in tool]
         if managed_agents is not None:
             tool_and_managed_agent_names += [agent.name for agent in managed_agents]
         if self.name:
@@ -1120,7 +1120,7 @@ class ToolCallingAgent(MultiStepAgent):
         try:
             model_message: ChatMessage = self.model(
                 memory_messages,
-                tools_to_call_from=self.tools,
+                tools=self.tools,
                 stop_sequences=["Observation:"],
             )
             memory_step.model_output_message = model_message
@@ -1138,10 +1138,14 @@ class ToolCallingAgent(MultiStepAgent):
         )
 
         if model_message.tool_calls is None or len(model_message.tool_calls) == 0:
-            raise AgentParsingError(
-                "Model did not call any tools. Call `final_answer` tool to return a final answer.",
-                self.logger,
+            final_answer = model_message.content
+            self.logger.log(
+                Text(f"Final answer: {final_answer}", style=f"bold {YELLOW_HEX}"),
+                level=LogLevel.INFO,
             )
+
+            memory_step.action_output = final_answer
+            return final_answer
 
         tool_call = model_message.tool_calls[0]
         tool_name, tool_call_id = tool_call.function.name, tool_call.id

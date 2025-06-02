@@ -43,4 +43,4 @@ camera:
   IMAGE_PATH: "./images/"
 
 profile:
-  PATH: "./profile/robot_profile.yaml"
+  PATH: "./slaver/profile/robot_profile.yaml"

@@ -131,11 +131,13 @@ class RobotManager:
     async def connect_to_robot(self):
         """Connect to an MCP server
         Args:
-            robot: Path to the server script (.py or .js)
+            robot: Path to the robot tools script (.py)
         """
         self.robot_profile = convert_yaml_to_json(config["profile"]["PATH"])
-        
-        server_params = StdioServerParameters(command="python", args=[self.robot_profile["robot_tools"]], env=None)
+
+        server_params = StdioServerParameters(
+            command="python", args=[self.robot_profile["robot_tools"]], env=None
+        )
 
         stdio_transport = await self.exit_stack.enter_async_context(
             stdio_client(server_params)
@@ -149,7 +151,7 @@ class RobotManager:
 
         # List available tools
         response = await self.session.list_tools()
-        tools_dict = [
+        self.tools = [
             {
                 "function": {
                     "name": tool.name,
@@ -159,7 +161,6 @@ class RobotManager:
             }
             for tool in response.tools
         ]
-        self.tools = response.tools
         print("\nConnected to robot with tools:", str(self.tools))
 
         """Complete robot registration with thread management"""
@@ -168,7 +169,7 @@ class RobotManager:
         register = {
             "robot_name": robot_name,
             "robot_type": self.robot_profile["robot_type"],
-            "robot_tool": tools_dict,
+            "robot_tool": self.tools,
             "current_position": self.robot_profile["current_position"],
             "navigate_position": self.robot_profile["navigate_position"],
             "robot_state": "idle",

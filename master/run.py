@@ -3,7 +3,7 @@ from agents.agent import GlobalAgent
 
 app = Flask(__name__)
 
-master_agent = GlobalAgent(config_path="config.yaml")
+master_agent = GlobalAgent(config_path="master/config.yaml")
 
 
 @app.route("/publish_task", methods=["POST", "GET"])

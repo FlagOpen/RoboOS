@@ -26,7 +26,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from huggingface_hub.utils import is_torch_available
-
 from tools.tools import Tool
 from tools.utils import (
     _is_package_available,
@@ -34,7 +33,6 @@ from tools.utils import (
     make_image_url,
     parse_json_blob,
 )
-
 
 if TYPE_CHECKING:
     from transformers import StoppingCriteriaList
@@ -219,9 +217,9 @@ def get_clean_message_list(
         if isinstance(message["content"], list):
             for element in message["content"]:
                 if element["type"] == "image":
-                    assert not flatten_messages_as_text, (
-                        f"Cannot use images with {flatten_messages_as_text=}"
-                    )
+                    assert (
+                        not flatten_messages_as_text
+                    ), f"Cannot use images with {flatten_messages_as_text=}"
                     if convert_images_to_image_urls:
                         element.update(
                             {
@@ -256,47 +254,6 @@ def get_clean_message_list(
     return output_message_list
 
 
-def get_tool_call_from_text(
-    text: str, tool_name_key: str, tool_arguments_key: str
-) -> ChatMessageToolCall:
-    try:
-        tool_call_dictionary, _ = parse_json_blob(text)
-    except Exception as e:
-
-        def find_matching_brace(s):
-            stack = []
-            for i, char in enumerate(s):
-                if char == "{":
-                    stack.append(i)
-                elif char == "}":
-                    if not stack:
-                        return -2
-                    stack.pop()
-                    if not stack:
-                        return i
-            return -2
-
-        start = text.find("{")
-        end = find_matching_brace(text) + 1
-        tool_call = json.loads(text[start:end].replace("'", '"'))
-        tool_call_dictionary = tool_call["function"]
-    try:
-        tool_name = tool_call_dictionary[tool_name_key]
-    except Exception as e:
-        raise ValueError(
-            f"Key {tool_name_key=} not found in the generated tool call. Got keys: {list(tool_call_dictionary.keys())} instead"
-        ) from e
-    tool_arguments = tool_call_dictionary.get(tool_arguments_key, None)
-    tool_arguments = parse_json_if_needed(tool_arguments)
-    return ChatMessageToolCall(
-        id=str(uuid.uuid4()),
-        type="function",
-        function=ChatMessageToolCallDefinition(
-            name=tool_name, arguments=tool_arguments
-        ),
-    )
-
-
 class Model:
     def __init__(
         self,
@@ -317,7 +274,6 @@ class Model:
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         custom_role_conversions: Optional[Dict[str, str]] = None,
         convert_images_to_image_urls: bool = False,
         **kwargs,
@@ -350,29 +306,6 @@ class Model:
         if grammar is not None:
             completion_kwargs["grammar"] = grammar
 
-        # Handle tools parameter
-        if tools_to_call_from:
-            completion_kwargs.update(
-                {
-                    "tools": [
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": tool.name,
-                                "description": tool.description,
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": tool.inputSchema.get("properties", {}),
-                                    "required": tool.inputSchema.get("required", [])
-                                }
-                            }
-                        }
-                        for tool in tools_to_call_from
-                    ],
-                    "tool_choice": "required"
-                }
-            )
-
         # Finally, use the passed-in kwargs to override all settings
         completion_kwargs.update(kwargs)
 
@@ -389,7 +322,6 @@ class Model:
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         """Process the input messages and return the model's response.
@@ -401,8 +333,6 @@ class Model:
                 A list of strings that will stop the generation if encountered in the model's output.
             grammar (`str`, *optional*):
                 The grammar or formatting structure to use in the model's response.
-            tools_to_call_from (`List[Tool]`, *optional*):
-                A list of tools that the model can use to generate responses.
             **kwargs:
                 Additional keyword arguments to be passed to the underlying model.
 
@@ -511,7 +441,6 @@ class VLLMModel(Model):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         from vllm import SamplingParams
@@ -521,7 +450,6 @@ class VLLMModel(Model):
             flatten_messages_as_text=(not self._is_vlm),
             stop_sequences=stop_sequences,
             grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
             **kwargs,
         )
         messages = completion_kwargs.pop("messages")
@@ -529,18 +457,12 @@ class VLLMModel(Model):
         tools = completion_kwargs.pop("tools", None)
         completion_kwargs.pop("tool_choice", None)
 
-        if tools_to_call_from is not None:
-            prompt = self.tokenizer.apply_chat_template(
-                messages,
-                tools=tools,
-                add_generation_prompt=True,
-                tokenize=False,
-            )
-        else:
-            prompt = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-            )
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            tools=tools,
+            add_generation_prompt=True,
+            tokenize=False,
+        )
 
         sampling_params = SamplingParams(
             n=kwargs.get("n", 1),
@@ -561,12 +483,6 @@ class VLLMModel(Model):
             content=output_text,
             raw={"out": output_text, "completion_kwargs": completion_kwargs},
         )
-        if tools_to_call_from:
-            chat_message.tool_calls = [
-                get_tool_call_from_text(
-                    output_text, self.tool_name_key, self.tool_arguments_key
-                )
-            ]
         return chat_message
 
 
@@ -639,14 +555,12 @@ class MLXModel(Model):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         completion_kwargs = self._prepare_completion_kwargs(
             messages=messages,
             stop_sequences=stop_sequences,
             grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
             **kwargs,
         )
         messages = completion_kwargs.pop("messages")
@@ -683,12 +597,6 @@ class MLXModel(Model):
             content=text,
             raw={"out": text, "completion_kwargs": completion_kwargs},
         )
-        if tools_to_call_from:
-            chat_message.tool_calls = [
-                get_tool_call_from_text(
-                    text, self.tool_name_key, self.tool_arguments_key
-                )
-            ]
         return chat_message
 
 
@@ -835,7 +743,6 @@ class TransformersModel(Model):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         completion_kwargs = self._prepare_completion_kwargs(
@@ -861,23 +768,17 @@ class TransformersModel(Model):
         if hasattr(self, "processor"):
             prompt_tensor = self.processor.apply_chat_template(
                 messages,
-                tools=[get_tool_json_schema(tool) for tool in tools_to_call_from]
-                if tools_to_call_from
-                else None,
                 return_tensors="pt",
                 tokenize=True,
                 return_dict=True,
-                add_generation_prompt=True if tools_to_call_from else False,
+                add_generation_prompt=True,
             )
         else:
             prompt_tensor = self.tokenizer.apply_chat_template(
                 messages,
-                tools=[get_tool_json_schema(tool) for tool in tools_to_call_from]
-                if tools_to_call_from
-                else None,
                 return_tensors="pt",
                 return_dict=True,
-                add_generation_prompt=True if tools_to_call_from else False,
+                add_generation_prompt=True,
             )
 
         prompt_tensor = prompt_tensor.to(self.model.device)
@@ -886,9 +787,9 @@ class TransformersModel(Model):
         if stop_sequences:
             stopping_criteria = self.make_stopping_criteria(
                 stop_sequences,
-                tokenizer=self.processor
-                if hasattr(self, "processor")
-                else self.tokenizer,
+                tokenizer=(
+                    self.processor if hasattr(self, "processor") else self.tokenizer
+                ),
             )
         else:
             stopping_criteria = None
@@ -918,12 +819,6 @@ class TransformersModel(Model):
             content=output_text,
             raw={"out": output_text, "completion_kwargs": completion_kwargs},
         )
-        if tools_to_call_from:
-            chat_message.tool_calls = [
-                get_tool_call_from_text(
-                    output_text, self.tool_name_key, self.tool_arguments_key
-                )
-            ]
         return chat_message
 
 
@@ -932,21 +827,14 @@ class ApiModel(Model):
         super().__init__(**kwargs)
 
     def postprocess_message(
-        self, message: ChatMessage, tools_to_call_from
+        self, message: ChatMessage
     ) -> ChatMessage:
         """Sometimes APIs fail to properly parse a tool call: this function tries to parse."""
         message.role = MessageRole.ASSISTANT  # Overwrite role if needed
-        if tools_to_call_from:
-            if not message.tool_calls:
-                message.tool_calls = [
-                    get_tool_call_from_text(
-                        message.content, self.tool_name_key, self.tool_arguments_key
-                    )
-                ]
-            for tool_call in message.tool_calls:
-                tool_call.function.arguments = parse_json_if_needed(
-                    tool_call.function.arguments
-                )
+        for tool_call in message.tool_calls:
+            tool_call.function.arguments = parse_json_if_needed(
+                tool_call.function.arguments
+            )
         return message
 
 
@@ -1002,7 +890,6 @@ class LiteLLMModel(ApiModel):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         try:
@@ -1016,7 +903,6 @@ class LiteLLMModel(ApiModel):
             messages=messages,
             stop_sequences=stop_sequences,
             grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
             model=self.model_id,
             api_base=self.api_base,
             api_key=self.api_key,
@@ -1035,7 +921,7 @@ class LiteLLMModel(ApiModel):
             )
         )
         first_message.raw = response
-        return self.postprocess_message(first_message, tools_to_call_from)
+        return self.postprocess_message(first_message)
 
 
 class HfApiModel(ApiModel):
@@ -1107,14 +993,12 @@ class HfApiModel(ApiModel):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         completion_kwargs = self._prepare_completion_kwargs(
             messages=messages,
             stop_sequences=stop_sequences,
             grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
             convert_images_to_image_urls=True,
             custom_role_conversions=self.custom_role_conversions,
             **kwargs,
@@ -1126,7 +1010,7 @@ class HfApiModel(ApiModel):
         first_message = ChatMessage.from_hf_api(
             response.choices[0].message, raw=response
         )
-        return self.postprocess_message(first_message, tools_to_call_from)
+        return self.postprocess_message(first_message)
 
 
 class OpenAIServerModel(ApiModel):
@@ -1194,14 +1078,12 @@ class OpenAIServerModel(ApiModel):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:
         completion_kwargs = self._prepare_completion_kwargs(
             messages=messages,
             stop_sequences=stop_sequences,
             grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
             model=self.model_id,
             custom_role_conversions=self.custom_role_conversions,
             convert_images_to_image_urls=True,
@@ -1218,7 +1100,7 @@ class OpenAIServerModel(ApiModel):
             )
         )
         first_message.raw = response
-        return self.postprocess_message(first_message, tools_to_call_from)
+        return self.postprocess_message(first_message)
 
 
 class AzureOpenAIServerModel(OpenAIServerModel):
