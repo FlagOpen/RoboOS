@@ -209,6 +209,7 @@ class MultiStepAgent:
         log_file: Optional[str] = None,
     ):
         self.agent_name = self.__class__.__name__
+        self.tools = tools
         self.model = model
         self.prompt_templates = prompt_templates or EMPTY_PROMPT_TEMPLATES
         self.max_steps = max_steps
@@ -222,7 +223,6 @@ class MultiStepAgent:
         self.final_answer_checks = final_answer_checks
 
         self._setup_managed_agents(managed_agents)
-        self._setup_tools(tools, add_base_tools)
         self._validate_tools_and_managed_agents(tools, managed_agents)
 
         self.system_prompt = self.initialize_system_prompt()
@@ -454,7 +454,6 @@ You have been provided with these additional arguments, that you can access usin
                         self.prompt_templates["planning"]["initial_plan"],
                         variables={
                             "task": task,
-                            "tools": self.tools,
                             "managed_agents": self.managed_agents,
                             "answer_facts": facts_message.content,
                         },
@@ -471,17 +470,7 @@ You have been provided with these additional arguments, that you can access usin
         # Do not take the system prompt message from the memory
         # summary_mode=False: Do not take previous plan steps to avoid influencing the new plan
         memory_messages = self.write_memory_to_messages()[1:]
-        facts_update_pre = {
-            "role": MessageRole.SYSTEM,
-            "content": [
-                {
-                    "type": "text",
-                    "text": self.prompt_templates["planning"][
-                        "update_facts_pre_messages"
-                    ],
-                }
-            ],
-        }
+        facts_update_pre = {}
         facts_update_post = {
             "role": MessageRole.USER,
             "content": [
@@ -496,18 +485,7 @@ You have been provided with these additional arguments, that you can access usin
         input_messages = [facts_update_pre] + memory_messages + [facts_update_post]
         facts_message = self.model(input_messages)
 
-        update_plan_pre = {
-            "role": MessageRole.SYSTEM,
-            "content": [
-                {
-                    "type": "text",
-                    "text": populate_template(
-                        self.prompt_templates["planning"]["update_plan_pre_messages"],
-                        variables={"task": task},
-                    ),
-                }
-            ],
-        }
+        update_plan_pre = {}
         update_plan_post = {
             "role": MessageRole.USER,
             "content": [
@@ -517,7 +495,6 @@ You have been provided with these additional arguments, that you can access usin
                         self.prompt_templates["planning"]["update_plan_post_messages"],
                         variables={
                             "task": task,
-                            "tools": self.tools,
                             "managed_agents": self.managed_agents,
                             "facts_update": facts_message.content,
                             "remaining_steps": (self.max_steps - step),
@@ -590,7 +567,7 @@ You have been provided with these additional arguments, that you can access usin
         that can be used as input to the LLM. Adds a number of keywords (such as PLAN, error, etc) to help
         the LLM.
         """
-        messages = self.memory.system_prompt.to_messages(summary_mode=summary_mode)
+        messages = []
         for memory_step in self.memory.steps:
             messages.extend(memory_step.to_messages(summary_mode=summary_mode))
         return messages
@@ -631,17 +608,7 @@ You have been provided with these additional arguments, that you can access usin
         Returns:
             `str`: Final answer to the task.
         """
-        messages = [
-            {
-                "role": MessageRole.SYSTEM,
-                "content": [
-                    {
-                        "type": "text",
-                        "text": self.prompt_templates["final_answer"]["pre_messages"],
-                    }
-                ],
-            }
-        ]
+        messages = []
         if images:
             messages[0]["content"].append({"type": "image"})
         messages += self.write_memory_to_messages()[1:]
@@ -876,7 +843,6 @@ You have been provided with these additional arguments, that you can access usin
                 "agent_name": agent_name,
                 "class_name": class_name,
                 "agent_dict": agent_dict,
-                "tools": self.tools,
                 "managed_agents": self.managed_agents,
                 "managed_agent_relative_path": managed_agent_relative_path,
             }
@@ -1128,11 +1094,6 @@ class ToolCallingAgent(MultiStepAgent):
         robot_name: str = None,
         **kwargs,
     ):
-        prompt_templates = prompt_templates or yaml.safe_load(
-            importlib.resources.files("prompts")
-            .joinpath("toolcalling_agent.yaml")
-            .read_text()
-        )
         self.tool_call = []
         self.communicator = communicator
         self.robot_name = robot_name
@@ -1143,13 +1104,6 @@ class ToolCallingAgent(MultiStepAgent):
             planning_interval=planning_interval,
             **kwargs,
         )
-
-    def initialize_system_prompt(self) -> str:
-        system_prompt = populate_template(
-            self.prompt_templates["system_prompt"],
-            variables={"tools": self.tools, "managed_agents": self.managed_agents},
-        )
-        return system_prompt
 
     def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """
@@ -1166,7 +1120,7 @@ class ToolCallingAgent(MultiStepAgent):
         try:
             model_message: ChatMessage = self.model(
                 memory_messages,
-                tools_to_call_from=list(self.tools.values()),
+                tools_to_call_from=self.tools,
                 stop_sequences=["Observation:"],
             )
             memory_step.model_output_message = model_message

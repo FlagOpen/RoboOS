@@ -1,26 +1,45 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import json
 import os
-import time
-import importlib
 import threading
-
-from flask import Flask
+import time
+from contextlib import AsyncExitStack
 from datetime import datetime
-from typing import Dict, List
-from utils import convert_yaml_to_json, communicator, config
-from agents.models import OpenAIServerModel, AzureOpenAIServerModel
+from typing import Dict, List, Optional
+
+from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
+from dotenv import load_dotenv
+from flask import Flask
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from utils import communicator, config, convert_yaml_to_json
+
+load_dotenv()  # load environment variables from .env
 
 
-app = Flask(__name__)
+def convert_tuple_to_json(input_tuple):
+    json_dict = {}
+
+    for item in input_tuple:
+        if isinstance(item[1], tuple):
+            json_dict[item[0]] = convert_tuple_to_json(item[1])
+        else:
+            json_dict[item[0]] = item[1]
+
+    return json_dict
 
 
 class RobotManager:
     """Centralized robot management system with task handling and communication"""
 
     def __init__(self, communicator, model="robobrain"):
+        # Initialize session and client objects
+        self.session: Optional[ClientSession] = None
+        self.exit_stack = AsyncExitStack()
+
         """
         Args:
             communicator: Message broker interface
@@ -31,14 +50,14 @@ class RobotManager:
         self.heartbeat_interval = 60
         self.lock = threading.Lock()
         self.model = self._gat_model_info_from_config()
-        self.register_robot()
+        self.tools = None
 
     def _gat_model_info_from_config(self):
         """Initial model"""
         for candidate in config["model"]["MODEL_LIST"]:
             if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
                 if candidate["CLOUD_TYPE"] == "azure":
-                    model_client = OpenAIServerModel(
+                    model_client = AzureOpenAIServerModel(
                         model_id=config["model"]["MODEL_SELECT"],
                         azure_endpoint=candidate["AZURE_ENDPOINT"],
                         azure_deployment=candidate["AZURE_DEPLOYMENT"],
@@ -46,7 +65,7 @@ class RobotManager:
                         api_version=candidate["AZURE_API_VERSION"],
                     )
                 elif candidate["CLOUD_TYPE"] == "default":
-                    model_client = AzureOpenAIServerModel(
+                    model_client = OpenAIServerModel(
                         api_key=candidate["CLOUD_API_KEY"],
                         api_base=candidate["CLOUD_SERVER"],
                         model_id=candidate["CLOUD_MODEL"],
@@ -70,11 +89,9 @@ class RobotManager:
     def _execute_task(self, task_data: Dict) -> None:
         """Internal task execution logic"""
 
-        robot_tool = self._get_tools()
-
         os.makedirs("./.log", exist_ok=True)
         agent = ToolCallingAgent(
-            tools=robot_tool,
+            tools=self.tools,
             verbosity_level=2,
             model=self.model,
             log_file="./.log/agent.log",
@@ -90,16 +107,6 @@ class RobotManager:
             tool_call=agent.tool_call,
         )
 
-    def _get_tools(self) -> List:
-        """Get toolset based on configured brand"""
-        robot_tool = self.robot_profile["robot_tool"]
-        tools = []
-        for robot in robot_tool:
-            module_path, class_name = robot["class"].rsplit(".", 1)
-            module = importlib.import_module(module_path)
-            tools.append(getattr(module, class_name)())
-        return tools
-
     def _send_result(
         self, robot_name: str, task: str, task_id: str, result: Dict, tool_call: List
     ) -> None:
@@ -114,17 +121,54 @@ class RobotManager:
         }
         self.communicator.send(channel, json.dumps(payload))
 
-    def register_robot(self) -> None:
+    def _heartbeat_loop(self, robot_name) -> None:
+        """Continuous heartbeat signal emitter"""
+        key = f"ROBOT_INFO_{robot_name}"
+        while True:
+            self.communicator.set_ttl(key, seconds=60)
+            time.sleep(30)
+
+    async def connect_to_robot(self):
+        """Connect to an MCP server
+        Args:
+            robot: Path to the server script (.py or .js)
+        """
+        self.robot_profile = convert_yaml_to_json(config["profile"]["PATH"])
+        
+        server_params = StdioServerParameters(command="python", args=[self.robot_profile["robot_tools"]], env=None)
+
+        stdio_transport = await self.exit_stack.enter_async_context(
+            stdio_client(server_params)
+        )
+        self.stdio, self.write = stdio_transport
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(self.stdio, self.write)
+        )
+
+        await self.session.initialize()
+
+        # List available tools
+        response = await self.session.list_tools()
+        tools_dict = [
+            {
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                },
+                "input_schema": tool.inputSchema,
+            }
+            for tool in response.tools
+        ]
+        self.tools = response.tools
+        print("\nConnected to robot with tools:", str(self.tools))
+
         """Complete robot registration with thread management"""
 
-        self.robot_profile = convert_yaml_to_json(config["profile"]["PATH"])
         robot_name = self.robot_profile["robot_name"]
         register = {
             "robot_name": robot_name,
             "robot_type": self.robot_profile["robot_type"],
-            "robot_tool": [
-                tool["tool_name"] for tool in self.robot_profile["robot_tool"]
-            ],
+            "robot_tool": tools_dict,
             "current_position": self.robot_profile["current_position"],
             "navigate_position": self.robot_profile["navigate_position"],
             "robot_state": "idle",
@@ -140,7 +184,7 @@ class RobotManager:
             # Heartbeat thread
             threading.Thread(
                 target=self._heartbeat_loop,
-                daemon=True,
+                daemon=False,
                 args=(robot_name,),
                 name=f"heartbeat_{robot_name}",
             ).start()
@@ -149,19 +193,24 @@ class RobotManager:
             channel_b2r = f"roboos_to_{robot_name}"
             threading.Thread(
                 target=lambda: self.communicator.listen(channel_b2r, self.handle_task),
-                daemon=True,
+                daemon=False,
                 name=channel_b2r,
             ).start()
 
-    def _heartbeat_loop(self, robot_name) -> None:
-        """Continuous heartbeat signal emitter"""
-        key = f"ROBOT_INFO_{robot_name}"
-        while True:
-            self.communicator.set_ttl(key, seconds=60)
-            time.sleep(30)
+    async def cleanup(self):
+        """Clean up resources"""
+        await self.exit_stack.aclose()
+
+
+async def main():
+    robot_manager = RobotManager(communicator)
+    try:
+        print("connecting to robot...")
+        await robot_manager.connect_to_robot()
+        print("connection success")
+    finally:
+        await robot_manager.cleanup()
 
 
 if __name__ == "__main__":
-    # start the Flask app
-    robot_manager = RobotManager(communicator)
-    app.run(host="0.0.0.0", port=5001)
+    asyncio.run(main(), debug=True)

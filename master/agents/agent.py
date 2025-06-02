@@ -196,9 +196,9 @@ class GlobalAgent:
         grouped_tasks = self._group_tasks_by_order(subtask_list)
         task_id = str(uuid.uuid4()).replace("-", "")
         order_flag = "false" if len(grouped_tasks.keys()) == 1 else "true"
-        for task_count, (order, task_group) in enumerate(grouped_tasks.items()):
-            self.logger.info(f"Sending task group {order}:\n{task_group}")
-            for task in task_group:
+        for task_count, (order, group_task) in enumerate(grouped_tasks.items()):
+            self.logger.info(f"Sending task group {order}:\n{group_task}")
+            for task in group_task:
                 robot_name = task.get("robot_name")
                 subtask_data = {
                     "task_id": task_id,
@@ -214,7 +214,7 @@ class GlobalAgent:
             # wait for all channels response
             if task_count + 1 < len(grouped_tasks.keys()):
                 channels = [
-                    f"{task.get('robot_name')}_to_roboos" for task in task_group
+                    f"{task.get('robot_name')}_to_roboos" for task in group_task
                 ]
                 self.communicator.wait_for_all_channels_response(
                     channels=channels, task_id=task_id
