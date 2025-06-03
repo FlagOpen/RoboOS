@@ -8,7 +8,6 @@ mcp = FastMCP("robots")
 @mcp.tool()
 async def navigate_to_target(target: str) -> str:
     """Navigate to target
-    finish_reason='tool_calls'
     Args:
         target: String, Represents the navigation destination.
     """
@@ -17,7 +16,6 @@ async def navigate_to_target(target: str) -> str:
 @mcp.tool()
 async def grasp_object(object: str) -> str:
     """Grasp the object for bring
-    finish_reason='tool_calls'
     Args:
         object: String, Represents which to grasp.
     """
@@ -26,7 +24,6 @@ async def grasp_object(object: str) -> str:
 @mcp.tool()
 async def place_to_affordance(affordance: str) -> str:
     """Place the grasped object in affordance
-    finish_reason='tool_calls'
     Args:
         affordance: String, Represents where the object to place.
     """

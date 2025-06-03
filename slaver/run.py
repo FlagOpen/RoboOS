@@ -11,25 +11,9 @@ from typing import Dict, List, Optional
 
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
-from dotenv import load_dotenv
-from flask import Flask
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from utils import communicator, config, convert_yaml_to_json
-
-load_dotenv()  # load environment variables from .env
-
-
-def convert_tuple_to_json(input_tuple):
-    json_dict = {}
-
-    for item in input_tuple:
-        if isinstance(item[1], tuple):
-            json_dict[item[0]] = convert_tuple_to_json(item[1])
-        else:
-            json_dict[item[0]] = item[1]
-
-    return json_dict
 
 
 class RobotManager:
@@ -131,7 +115,7 @@ class RobotManager:
     async def connect_to_robot(self):
         """Connect to an MCP server
         Args:
-            robot: Path to the robot tools script (.py)
+            robot_tools: Path to the robot tools script (.py)
         """
         self.robot_profile = convert_yaml_to_json(config["profile"]["PATH"])
 
