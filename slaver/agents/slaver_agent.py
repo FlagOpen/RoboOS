@@ -470,7 +470,17 @@ You have been provided with these additional arguments, that you can access usin
         # Do not take the system prompt message from the memory
         # summary_mode=False: Do not take previous plan steps to avoid influencing the new plan
         memory_messages = self.write_memory_to_messages()[1:]
-        facts_update_pre = {}
+        facts_update_pre = {
+            "role": MessageRole.SYSTEM,
+            "content": [
+                {
+                    "type": "text",
+                    "text": self.prompt_templates["planning"][
+                        "update_facts_pre_messages"
+                    ],
+                }
+            ],
+        }
         facts_update_post = {
             "role": MessageRole.USER,
             "content": [
@@ -485,7 +495,18 @@ You have been provided with these additional arguments, that you can access usin
         input_messages = [facts_update_pre] + memory_messages + [facts_update_post]
         facts_message = self.model(input_messages)
 
-        update_plan_pre = {}
+        update_plan_pre = {
+            "role": MessageRole.SYSTEM,
+            "content": [
+                {
+                    "type": "text",
+                    "text": populate_template(
+                        self.prompt_templates["planning"]["update_plan_pre_messages"],
+                        variables={"task": task},
+                    ),
+                }
+            ],
+        }
         update_plan_post = {
             "role": MessageRole.USER,
             "content": [
@@ -1151,7 +1172,6 @@ class ToolCallingAgent(MultiStepAgent):
             title="Output message of the LLM:",
             level=LogLevel.DEBUG,
         )
-
         if model_message.tool_calls is None or len(model_message.tool_calls) == 0:
             final_answer = model_message.content
             self.logger.log(
