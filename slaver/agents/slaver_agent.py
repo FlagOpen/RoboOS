@@ -696,7 +696,7 @@ You have been provided with these additional arguments, that you can access usin
         spec.loader.exec_module(module)
         
         func = getattr(module, tool_name)
-        result = func(arguments)
+        result = func(**arguments)
             
         return result
 
