@@ -469,6 +469,7 @@ class VLLMModel(Model):
             n=kwargs.get("n", 1),
             temperature=kwargs.get("temperature", 0.0),
             top_p=kwargs.get("top_p", 1.0),
+            top_k=kwargs.get("top_k", 1.0),
             max_tokens=kwargs.get("max_tokens", 8192),
             stop=prepared_stop_sequences,
         )

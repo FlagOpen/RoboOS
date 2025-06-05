@@ -193,6 +193,7 @@ class MultiStepAgent:
     def __init__(
         self,
         tools: List[Tool],
+        tools_path: str,
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         prompt_templates: Optional[PromptTemplates] = None,
         max_steps: int = 20,
@@ -210,6 +211,7 @@ class MultiStepAgent:
     ):
         self.agent_name = self.__class__.__name__
         self.tools = tools
+        self.tools_path = tools_path
         self.model = model
         self.prompt_templates = prompt_templates or EMPTY_PROMPT_TEMPLATES
         self.max_steps = max_steps
@@ -674,8 +676,8 @@ You have been provided with these additional arguments, that you can access usin
             for param, props in tool_def['input_schema']['properties'].items():
                 inputs[param] = props['type']  # or use props.get('description', props['type'])
             
-            tools_dict[tool_name] = {
-                'description': tool_desc,
+            tools_dict[tool_def['function']['name']] = {
+                'description': tool_def['function']['description'],
                 'inputs': inputs,
                 'output_type': None  # Set this appropriately for your tools
             }
@@ -683,43 +685,21 @@ You have been provided with these additional arguments, that you can access usin
         if tool_name not in available_tools:
             error_msg = f"Unknown tool {tool_name}, should be instead one of {list(available_tools.keys())}."
             raise AgentExecutionError(error_msg, self.logger)
+        
+        import importlib.util
+        from pathlib import Path
+        
+        file_path = Path(self.tools_path).absolute()
+        module_name = file_path.stem
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        func = getattr(module, tool_name)
+        result = func(arguments)
+            
+        return result
 
-        try:
-            if isinstance(arguments, str):
-                if tool_name in self.managed_agents:
-                    observation = available_tools[tool_name].__call__(arguments)
-                else:
-                    observation = available_tools[tool_name].__call__(
-                        arguments, sanitize_inputs_outputs=True
-                    )
-            elif isinstance(arguments, dict):
-                for key, value in arguments.items():
-                    if isinstance(value, str) and value in self.state:
-                        arguments[key] = self.state[value]
-                if tool_name in self.managed_agents:
-                    observation = available_tools[tool_name].__call__(**arguments)
-                else:
-                    observation = available_tools[tool_name].__call__(
-                        **arguments, sanitize_inputs_outputs=True
-                    )
-            else:
-                error_msg = f"Arguments passed to tool should be a dict or string: got a {type(arguments)}."
-                raise AgentExecutionError(error_msg, self.logger)
-            return observation
-        except Exception as e:
-            if tool_name in self.tools:
-                tool = self.tools[tool_name]
-                error_msg = (
-                    f"Error when executing tool {tool_name} with arguments {arguments}: {type(e).__name__}: {e}\nYou should only use this tool with a correct input.\n"
-                    f"As a reminder, this tool's description is the following: '{tool.description}'.\nIt takes inputs: {tool.inputs} and returns output type {tool.output_type}"
-                )
-                raise AgentExecutionError(error_msg, self.logger)
-            elif tool_name in self.managed_agents:
-                error_msg = (
-                    f"Error in calling team member: {e}\nYou should only ask this team member with a correct request.\n"
-                    f"As a reminder, this team member's description is the following:\n{available_tools[tool_name]}"
-                )
-                raise AgentExecutionError(error_msg, self.logger)
 
     def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """To be implemented in children classes. Should return either None if the step is not final."""
@@ -1123,6 +1103,7 @@ class ToolCallingAgent(MultiStepAgent):
     def __init__(
         self,
         tools: List[Tool],
+        tools_path: str,
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         prompt_templates: Optional[PromptTemplates] = None,
         planning_interval: Optional[int] = None,
@@ -1135,6 +1116,7 @@ class ToolCallingAgent(MultiStepAgent):
         self.robot_name = robot_name
         super().__init__(
             tools=tools,
+            tools_path=tools_path,
             model=model,
             prompt_templates=prompt_templates,
             planning_interval=planning_interval,

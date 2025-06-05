@@ -35,6 +35,7 @@ class RobotManager:
         self.lock = threading.Lock()
         self.model = self._gat_model_info_from_config()
         self.tools = None
+        self.tools_path = None
 
     def _gat_model_info_from_config(self):
         """Initial model"""
@@ -76,6 +77,7 @@ class RobotManager:
         os.makedirs("./.log", exist_ok=True)
         agent = ToolCallingAgent(
             tools=self.tools,
+            tools_path=self.tools_path,
             verbosity_level=2,
             model=self.model,
             log_file="./.log/agent.log",
@@ -118,9 +120,14 @@ class RobotManager:
             robot_tools: Path to the robot tools script (.py)
         """
         self.robot_profile = convert_yaml_to_json(config["profile"]["PATH"])
+        
+        robot_tools = self.robot_profile["robot_tools"]
+        self.tools_path = robot_tools
+        robot_tools_mcp = (robot_tools.split('.'))[0]+"_mcp.py"
+        print(robot_tools.split('.'), robot_tools_mcp)
 
         server_params = StdioServerParameters(
-            command="python", args=[self.robot_profile["robot_tools"]], env=None
+            command="python", args=[robot_tools_mcp]], env=None
         )
 
         stdio_transport = await self.exit_stack.enter_async_context(
