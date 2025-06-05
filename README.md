@@ -32,6 +32,8 @@ Extensive real-world experiments across diverse scenarios (e.g., restaurant, hou
 ## <a id="Manual"> ⭐️ Full Guide Manual (RoboOS-Official)
 *Coming soon ...*
 
+Due to the substantial code refactoring and engineering efforts required, we'll need to postpone the release by *several days*. We appreciate your patience as we ensure the highest quality standards.
+
 
 ## <a id="Manual"> ⭐️ Simple Guide Manual (Only for RoboOS-Preview)</a>
 
