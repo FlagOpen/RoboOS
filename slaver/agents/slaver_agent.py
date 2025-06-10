@@ -666,26 +666,6 @@ You have been provided with these additional arguments, that you can access usin
             tool_name (`str`): Name of the Tool to execute (should be one from self.tools).
             arguments (Dict[str, str]): Arguments passed to the Tool.
         """
-        tools_dict = {}
-        for tool_def in self.tools:  # self.tools is in the format you provided
-            tool_name = tool_def['function']['name']
-            tool_desc = tool_def['function']['description']
-            
-            # Extract inputs from input_schema
-            inputs = {}
-            for param, props in tool_def['input_schema']['properties'].items():
-                inputs[param] = props['type']  # or use props.get('description', props['type'])
-            
-            tools_dict[tool_def['function']['name']] = {
-                'description': tool_def['function']['description'],
-                'inputs': inputs,
-                'output_type': None  # Set this appropriately for your tools
-            }
-        available_tools = {**tools_dict, **self.managed_agents}
-        if tool_name not in available_tools:
-            error_msg = f"Unknown tool {tool_name}, should be instead one of {list(available_tools.keys())}."
-            raise AgentExecutionError(error_msg, self.logger)
-        
         import importlib.util
         from pathlib import Path
         

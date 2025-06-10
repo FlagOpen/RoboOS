@@ -127,7 +127,7 @@ class RobotManager:
         print(robot_tools.split('.'), robot_tools_mcp)
 
         server_params = StdioServerParameters(
-            command="python", args=[robot_tools_mcp]], env=None
+            command="python", args=[robot_tools_mcp], env=None
         )
 
         stdio_transport = await self.exit_stack.enter_async_context(
