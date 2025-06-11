@@ -590,7 +590,7 @@ You have been provided with these additional arguments, that you can access usin
         that can be used as input to the LLM. Adds a number of keywords (such as PLAN, error, etc) to help
         the LLM.
         """
-        messages = []
+        messages = self.memory.system_prompt.to_messages(summary_mode=summary_mode)
         for memory_step in self.memory.steps:
             messages.extend(memory_step.to_messages(summary_mode=summary_mode))
         return messages
@@ -1091,6 +1091,7 @@ class ToolCallingAgent(MultiStepAgent):
         robot_name: str = None,
         **kwargs,
     ):
+        prompt_templates = prompt_templates or yaml.safe_load(importlib.resources.files("prompts").joinpath("toolcalling_agent.yaml").read_text())
         self.tool_call = []
         self.communicator = communicator
         self.robot_name = robot_name
@@ -1102,6 +1103,32 @@ class ToolCallingAgent(MultiStepAgent):
             planning_interval=planning_interval,
             **kwargs,
         )
+        
+    def initialize_system_prompt(self) -> str:
+        
+        system_prompt = populate_template(
+            self.prompt_templates["system_prompt"],
+            variables={"tools": self.tools, "managed_agents": self.managed_agents},
+        )
+        return system_prompt
+
+    def _extract_json(self, input_string):
+        """Extract JSON from a string."""
+        start_marker = "```json"
+        end_marker = "```"
+        try:
+            start_idx = input_string.find(start_marker)
+            end_idx = input_string.find(end_marker, start_idx + len(start_marker))
+            if start_idx == -1 or end_idx == -1:
+                self.logger.log("[WARNING] JSON markers not found in the string.")
+                return None
+            json_str = input_string[start_idx + len(start_marker) : end_idx].strip()
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            self.logger.log(
+                f"[WARNING] JSON cannot be extracted from the string.\n{e}"
+            )
+            return None
 
     def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """
@@ -1134,19 +1161,23 @@ class ToolCallingAgent(MultiStepAgent):
             title="Output message of the LLM:",
             level=LogLevel.DEBUG,
         )
-        if model_message.tool_calls is None or len(model_message.tool_calls) == 0:
+        if model_message.tool_calls:
+            tool_call = model_message.tool_calls[0]
+            tool_name, tool_call_id = tool_call.function.name, tool_call.id
+            tool_arguments = tool_call.function.arguments
+        else:
             final_answer = model_message.content
             self.logger.log(
                 Text(f"Final answer: {final_answer}", style=f"bold {YELLOW_HEX}"),
                 level=LogLevel.INFO,
             )
-
-            memory_step.action_output = final_answer
-            return final_answer
-
-        tool_call = model_message.tool_calls[0]
-        tool_name, tool_call_id = tool_call.function.name, tool_call.id
-        tool_arguments = tool_call.function.arguments
+            tool_json = self._extract_json(final_answer)
+            if tool_json:
+                tool_name, tool_arguments = tool_json["name"], tool_json["arguments"]
+                tool_call_id = model_message.raw.id 
+            else:
+                memory_step.action_output = final_answer
+                return final_answer
 
         memory_step.tool_calls = [
             ToolCall(name=tool_name, arguments=tool_arguments, id=tool_call_id)

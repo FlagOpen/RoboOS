@@ -16,12 +16,11 @@ def grasp_object(object: str) -> str:
     print(ret)
     return ret
 
-def place_to_affordance(affordance: str, object: str) -> str:
+def place_to_affordance(affordance: str) -> str:
     """Place the grasped object in affordance
     Args:
         affordance: String, Represents where the object to place.
-        object: String, Represents the object has been grasped.
     """
-    ret = f"Place {object} on {affordance} success."
+    ret = f"Place on {affordance} success."
     print(ret)
     return ret

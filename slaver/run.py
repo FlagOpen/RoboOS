@@ -149,6 +149,7 @@ class RobotManager:
                     "description": tool.description,
                 },
                 "input_schema": tool.inputSchema,
+                "output_type": "any"
             }
             for tool in response.tools
         ]
