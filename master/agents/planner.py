@@ -105,7 +105,7 @@ class GlobalTaskPlanner:
 
         raise ValueError(f"Unsupported model: {config['MODEL_SELECT']}")
 
-    def _init_config(self, config_path="config.yaml"):
+    def _init_config(self, config_path="master/config.yaml"):
         """Initialize configuration"""
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -134,7 +134,7 @@ class GlobalTaskPlanner:
 
 
 if __name__ == "__main__":
-    planner = GlobalTaskPlanner(config="config.yaml")
+    planner = GlobalTaskPlanner(config="master/config.yaml")
     task = "Take basket to kitchenTable, and put apple and knife into basket, and then take them back to customTable."
     response = planner.forward(task)
     print(response)

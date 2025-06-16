@@ -11,7 +11,7 @@ from flag_scale.flagscale.agent.communication import Communicator
 
 
 class GlobalAgent:
-    def __init__(self, config_path="config.yaml"):
+    def __init__(self, config_path="master/config.yaml"):
         """Initialize GlobalAgent"""
         self._init_config(config_path)
         self._init_logger(self.config["logger"])
@@ -69,7 +69,7 @@ class GlobalAgent:
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
 
-    def _init_config(self, config_path="config.yaml"):
+    def _init_config(self, config_path="master/config.yaml"):
         """Initialize configuration"""
         with open(config_path, "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)

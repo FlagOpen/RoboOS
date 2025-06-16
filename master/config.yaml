@@ -94,10 +94,6 @@ communicator:
 
 # profile Parameters
 profile:
-  # Path to the robot profile file
-  ROBOT_PROFILE_PATH: "master/profile/robot_profile.yaml"
-  # Whether enable loading robot profile as initialization
-  ROBOT_PROFILE_ENABLE: false
   # Path to the scene profile file
   SCENE_PROFILE_PATH: "master/profile/scene_profile.yaml"
   # Whether enable loading scene profile as initialization

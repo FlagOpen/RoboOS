@@ -26,7 +26,7 @@ def convert_yaml_to_json(yaml_path: str):
 
 class Config:
     @classmethod
-    def load_config(cls, config_path="config.yaml"):
+    def load_config(cls, config_path="slaver/config.yaml"):
         """Initialize configuration"""
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)

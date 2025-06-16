@@ -10,7 +10,7 @@ app = Flask(__name__, static_folder="assets")
 socketio = SocketIO(app)
 
 
-master_agent = GlobalAgent(config_path="config.yaml")
+master_agent = GlobalAgent(config_path="master/config.yaml")
 
 
 def send_text_to_forntend(text):
