@@ -9,47 +9,21 @@ tool:
   # Probability of error in tool execution
   ERROR_PROBABILITY: 0
 
-# Model Parameters
+# Cloud Server Infos
 model:
   # Model name for the cloud server
-  MODEL_SELECT: "robobrain"
+  MODEL_SELECT: "/workspace/model/BAAI/RoboBrain2.0-7B"
   # Number of retries for planning
   MODEL_RETRY_PLANNING: 5
   MODEL_LIST:
     - # Model name for the cloud server
-      CLOUD_MODEL: "robobrain"
+      CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
       # Deploy for the cloud server
       CLOUD_TYPE: "default"
       # API key for the cloud server
-      CLOUD_API_KEY: "YOUR-API-KEY"
+      CLOUD_API_KEY: "EMPTY"
       # URL of the cloud server
-      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"
-      # Maximum number of chat messages to keep in memory
-      MAX_CHAT_MESSAGE: 50
-
-    - # Model name for the cloud server
-      CLOUD_MODEL: "deepseekv3"
-      # Deploy for the cloud server
-      CLOUD_TYPE: "default"
-      # API key for the cloud server
-      CLOUD_API_KEY: "YOUR-API-KEY"
-      # URL of the cloud server
-      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"
-      # Maximum number of chat messages to keep in memory
-      MAX_CHAT_MESSAGE: 50
-
-    - # Model name for the cloud server
-      CLOUD_MODEL: "gemini"
-      # Deploy for the cloud server
-      CLOUD_TYPE: "azure"
-      # Azure endpoint for the cloud server
-      AZURE_ENDPOINT: "YOUR-ENDPOINT"
-      # Azure deployment name for the cloud server
-      AZURE_DEPLOYMENT: "YOUR_DEPLOYMENT"
-      # API key for the cloud server
-      AZURE_API_KEY: "YOUR-API-KEY"
-      # API version for the cloud server
-      AZURE_API_VERSION: "YOUR-API-VERSION"
+      CLOUD_SERVER: "http://localhost:4567/v1/"
       # Maximum number of chat messages to keep in memory
       MAX_CHAT_MESSAGE: 50
 
