@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
 import inspect
-import json
+import importlib
 import time
+import yaml
 from collections import deque
 from logging import getLogger
 from typing import (
@@ -15,6 +16,7 @@ from typing import (
     Union,
 )
 
+from jinja2 import StrictUndefined, Template
 from rich.panel import Panel
 from rich.text import Text
 from tools.memory import (
@@ -41,6 +43,9 @@ from tools.utils import (
     AgentMaxStepsError
 )
 
+from tools.memory import Message
+
+
 logger = getLogger(__name__)
 
 
@@ -61,13 +66,15 @@ class MultiStepAgent:
         tools: List[Dict[str, str]],
         tools_path: str,
         model: Callable[[List[Dict[str, str]]], ChatMessage],
-        # prompt_templates: Optional[PromptTemplates] = None,
+        prompt_templates: str = None,
         max_steps: int = 20,
         verbosity_level: LogLevel = LogLevel.INFO,
         step_callbacks: Optional[List[Callable]] = None,
         log_file: Optional[str] = None,
     ):
         self.tools = tools
+        self.prompt_templates = prompt_templates
+        self.system_prompt = self.initialize_system_prompt()
         self.tools_path = tools_path
         self.model = model
         self.max_steps = max_steps
@@ -77,8 +84,24 @@ class MultiStepAgent:
         self.logger = AgentLogger(level=verbosity_level, log_file=log_file)
         self.monitor = Monitor(self.model, self.logger)
         self.step_callbacks = step_callbacks if step_callbacks is not None else []
-        self.step_callbacks.append(self.monitor.update_metrics)  
-        
+        self.step_callbacks.append(self.monitor.update_metrics) 
+
+    @staticmethod
+    def populate_template(template: str, variables: Dict[str, Any]) -> str:
+        compiled_template = Template(template, undefined=StrictUndefined)
+        try:
+            return compiled_template.render(**variables)
+        except Exception as e:
+            raise Exception(
+                f"Error during jinja template rendering: {type(e).__name__}: {e}"
+            )
+
+    def initialize_system_prompt(self) -> str:
+        system_prompt = self.populate_template(
+            self.prompt_templates["system_prompt"],
+            variables={"tools": self.tools},
+        )
+        return system_prompt    
     
     def run(
         self,
@@ -190,7 +213,7 @@ You have been provided with these additional arguments, that you can access usin
         messages = []
         if images:
             messages[0]["content"].append({"type": "image"})
-        messages += self.write_memory_to_messages()
+        messages += self.write_memory_to_messages()[1:]
         messages += [
             {
                 "role": MessageRole.USER,
@@ -239,7 +262,12 @@ You have been provided with these additional arguments, that you can access usin
         that can be used as input to the LLM. Adds a number of keywords (such as PLAN, error, etc) to help
         the LLM.
         """
-        messages = []
+        messages = [
+            Message(
+                role=MessageRole.SYSTEM,
+                content=[{"type": "text", "text": self.system_prompt}]
+            )
+        ]
         for memory_step in self.memory.steps:
             messages.extend(memory_step.to_messages(summary_mode=summary_mode))
         return messages
@@ -266,6 +294,11 @@ class ToolCallingAgent(MultiStepAgent):
         robot_name: str = None,
         **kwargs,
     ):
+        prompt_templates = yaml.safe_load(
+            importlib.resources.files("prompts")
+            .joinpath("toolcalling_agent.yaml")
+            .read_text()
+        )
         self.tool_call = []
         self.communicator = communicator
         self.robot_name = robot_name
@@ -273,6 +306,7 @@ class ToolCallingAgent(MultiStepAgent):
             tools=tools,
             tools_path=tools_path,
             model=model,
+            prompt_templates=prompt_templates,
             **kwargs,
         )
         
@@ -320,7 +354,6 @@ class ToolCallingAgent(MultiStepAgent):
         memory_step.observations = str(observation).strip()
         return None
 
-
     def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """
         Perform one step in the ReAct framework: the agent thinks, acts, and observes the result.
@@ -330,13 +363,12 @@ class ToolCallingAgent(MultiStepAgent):
 
         memory_messages = self.write_memory_to_messages()
         self.input_messages = memory_messages
-
         # Add new step in logs
         memory_step.model_input_messages = memory_messages.copy()
         try:
             model_message: ChatMessage = self.model(
                 memory_messages,
-                tools=self.tools,
+                tools_to_call_from=self.tools,
                 stop_sequences=["Observation:"],
             )
             memory_step.model_output_message = model_message
@@ -356,6 +388,7 @@ class ToolCallingAgent(MultiStepAgent):
             tool_name, tool_call_id = tool_call.function.name, tool_call.id
             tool_arguments = tool_call.function.arguments
         else:
+            
             final_answer = model_message.content
             tool_arguments = {"answer": final_answer}
             tool_name = "final_answer"

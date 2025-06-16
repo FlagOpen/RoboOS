@@ -15,12 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import importlib.util
+import re
 import json
+import uuid
 import logging
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 from tools.utils import (
     _is_package_available,
@@ -137,6 +139,97 @@ tool_role_conversions = {
     MessageRole.TOOL_RESPONSE: MessageRole.USER,
 }
 
+
+def parse_json_blob(json_blob: str) -> Tuple[Dict[str, str], str]:
+    "Extracts the JSON blob from the input and returns the JSON data and the rest of the input."
+    try:
+        first_accolade_index = json_blob.find("{")
+        last_accolade_index = [a.start() for a in list(re.finditer("}", json_blob))][-1]
+        json_data = json_blob[first_accolade_index : last_accolade_index + 1].replace(
+            '\\"', "'"
+        )
+        json_data = json.loads(json_data, strict=False)
+        return json_data, json_blob[:first_accolade_index]
+    except json.JSONDecodeError as e:
+        place = e.pos
+        if json_blob[place - 1 : place + 2] == "},\n":
+            raise ValueError(
+                "JSON is invalid: you probably tried to provide multiple tool calls in one action. PROVIDE ONLY ONE TOOL CALL."
+            )
+        raise ValueError(
+            f"The JSON blob you used is invalid due to the following error: {e}.\n"
+            f"JSON blob was: {json_blob}, decoding failed on that specific part of the blob:\n"
+            f"'{json_blob[place - 4 : place + 5]}'."
+        )
+
+
+def get_tool_call_from_text(
+    text: str, tool_name_key: str, tool_arguments_key: str
+) -> ChatMessageToolCall:
+    try:
+        tool_call_dictionary, _ = parse_json_blob(text)
+    except Exception as e:
+
+        def find_matching_brace(s):
+            stack = []
+            for i, char in enumerate(s):
+                if char == "{":
+                    stack.append(i)
+                elif char == "}":
+                    if not stack:
+                        return -2
+                    stack.pop()
+                    if not stack:
+                        return i
+            return -2
+
+        try:
+            start = text.find("{")
+            end = find_matching_brace(text) + 1
+            tool_call = json.loads(text[start:end].replace("'", '"'))
+            tool_call_dictionary = tool_call["function"]
+        except Exception as e:
+            raise ValueError(
+                f"the generated tool call can not be json.loads successfully. Please try to generate again."
+            ) from e
+    
+    try:
+        tool_name = tool_call_dictionary[tool_name_key]
+    except Exception as e:
+        raise ValueError(
+            f"Key {tool_name_key=} not found in the generated tool call. Got keys: {list(tool_call_dictionary.keys())} instead"
+        ) from e
+    tool_arguments = tool_call_dictionary.get(tool_arguments_key, None)
+    tool_arguments = parse_json_if_needed(tool_arguments)
+    return ChatMessageToolCall(
+        id=str(uuid.uuid4()),
+        type="function",
+        function=ChatMessageToolCallDefinition(
+            name=tool_name, arguments=tool_arguments
+        ),
+    )
+
+def get_tool_json_schema(tool) -> Dict:
+    function_info = tool['function']
+    properties = tool['input_schema']
+    required = []
+    for key, value in properties.items():
+        if not ("nullable" in value and value["nullable"]):
+            required.append(key)
+    return {
+        "type": "function",
+        "function": {
+            "name": function_info["name"],
+            "description": function_info["description"],
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            },
+        },
+    }
+
+
 def get_clean_message_list(
     message_list: List[Dict[str, str]],
     role_conversions: Dict[MessageRole, MessageRole] = {},
@@ -224,6 +317,7 @@ class Model:
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
+        tools_to_call_from: Optional[List[str]] = None,
         custom_role_conversions: Optional[Dict[str, str]] = None,
         convert_images_to_image_urls: bool = False,
         **kwargs,
@@ -255,6 +349,20 @@ class Model:
             completion_kwargs["stop"] = stop_sequences
         if grammar is not None:
             completion_kwargs["grammar"] = grammar
+            
+        # Handle tools parameter
+        if tools_to_call_from:
+            completion_kwargs.update(
+                {
+                    "tools": [
+                        get_tool_json_schema(tool) for tool in tools_to_call_from
+                    ],
+                    "tool_choice": "required",
+                }
+            )
+
+        # Finally, use the passed-in kwargs to override all settings
+        completion_kwargs.update(kwargs)
 
         # Finally, use the passed-in kwargs to override all settings
         completion_kwargs.update(kwargs)
@@ -331,14 +439,21 @@ class ApiModel(Model):
         super().__init__(**kwargs)
 
     def postprocess_message(
-        self, message: ChatMessage
+        self, message: ChatMessage, tools_to_call_from
     ) -> ChatMessage:
         """Sometimes APIs fail to properly parse a tool call: this function tries to parse."""
         message.role = MessageRole.ASSISTANT  # Overwrite role if needed
-        for tool_call in message.tool_calls:
-            tool_call.function.arguments = parse_json_if_needed(
-                tool_call.function.arguments
-            )
+        if tools_to_call_from:
+            if not message.tool_calls:
+                message.tool_calls = [
+                    get_tool_call_from_text(
+                        message.content, self.tool_name_key, self.tool_arguments_key
+                    )
+                ]
+            for tool_call in message.tool_calls:
+                tool_call.function.arguments = parse_json_if_needed(
+                    tool_call.function.arguments
+                )
         return message
 
 class OpenAIServerModel(ApiModel):
@@ -406,12 +521,14 @@ class OpenAIServerModel(ApiModel):
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
         grammar: Optional[str] = None,
+        tools_to_call_from: Optional[List[str]] = None,
         **kwargs,
     ) -> ChatMessage:
         completion_kwargs = self._prepare_completion_kwargs(
             messages=messages,
             stop_sequences=stop_sequences,
             grammar=grammar,
+            tools_to_call_from=tools_to_call_from,
             model=self.model_id,
             custom_role_conversions=self.custom_role_conversions,
             convert_images_to_image_urls=True,
@@ -428,7 +545,7 @@ class OpenAIServerModel(ApiModel):
             )
         )
         first_message.raw = response
-        return self.postprocess_message(first_message)
+        return self.postprocess_message(first_message, tools_to_call_from)
 
 class AzureOpenAIServerModel(OpenAIServerModel):
     """This model connects to an Azure OpenAI deployment.
