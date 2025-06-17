@@ -69,7 +69,7 @@ communicator:
 # profile Parameters
 profile:
   # Path to the scene profile file
-  SCENE_PROFILE_PATH: "master/profile/scene_profile.yaml"
+  SCENE_PROFILE_PATH: "profile/scene_profile.yaml"
   # Whether enable loading scene profile as initialization
   SCENE_PROFILE_ENABLE: true
 
@@ -80,8 +80,8 @@ logger:
   # Log level for task logger
   MASTER_LOGGER_LEVEL: "DEBUG"
   # Path to save the task log file
-  MASTER_LOGGER_FILE: "master/.logs/master_agent.log"
+  MASTER_LOGGER_FILE: ".logs/master_agent.log"
   # Path to save the robot memory file
-  ROBOT_MEMORY_YAML: "master/.log/robot_memory.yaml"
+  ROBOT_MEMORY_YAML: ".log/robot_memory.yaml"
   # Path to save the scene memory file
-  SCENE_MEMORY_YAML: "master/.log/scene_memory.yaml"
+  SCENE_MEMORY_YAML: ".log/scene_memory.yaml"

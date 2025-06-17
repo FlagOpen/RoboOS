@@ -43,9 +43,9 @@ communicator:
 # Camera Parameters
 camera:
   # Path to save camera images
-  IMAGE_PATH: "slaver/images/"
+  IMAGE_PATH: "images/"
 
 # Profile Parameters
 profile:
   # Path to the robot profile file
-  PATH: "slaver/robot_tools/robot_profile.yaml"
+  PATH: "robot_tools/robot_profile.yaml"

@@ -72,10 +72,12 @@ pip install -r requirements.txt
 redis-server
 
 # 2. Start Master
-python master/run.py
+cd master
+python run.py
 
 # 3. Start Slaver (for multi-agent, your should run at different robots respectively)
-python slaver/run.py
+cd slaver
+python run.py
 
 # 4. Launch Web Interface
 python gradio_ui.py
