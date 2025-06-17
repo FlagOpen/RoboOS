@@ -21,15 +21,11 @@ import ast
 import base64
 import importlib.metadata
 import importlib.util
-import inspect
 import json
 import yaml
-import os
 import re
-import types
 from functools import lru_cache
 from io import BytesIO
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Dict
 from flag_scale.flagscale.agent.communication import Communicator
 
@@ -39,20 +35,6 @@ if TYPE_CHECKING:
 
 
 __all__ = ["AgentError"]
-
-
-@lru_cache
-def _is_package_available(package_name: str) -> bool:
-    try:
-        importlib.metadata.version(package_name)
-        return True
-    except importlib.metadata.PackageNotFoundError:
-        return False
-
-
-@lru_cache
-def _is_pillow_available():
-    return importlib.util.find_spec("PIL") is not None
 
 
 BASE_BUILTIN_MODULES = [

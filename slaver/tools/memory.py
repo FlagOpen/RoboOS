@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 from dataclasses import asdict, dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, List, TypedDict, Union, Optional
@@ -41,30 +40,19 @@ class ToolCall:
     arguments: Any
     id: str
 
-    def dict(self):
-        return {
-            "id": self.id,
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "arguments": make_json_serializable(self.arguments),
-            },
-        }
-
 
 @dataclass
 class MemoryStep:
     def dict(self):
         return asdict(self)
 
-    def to_messages(self, **kwargs) -> List[Dict[str, Any]]:
+    def to_messages(self) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
 
 @dataclass
 class ActionStep(MemoryStep):
     model_input_messages: Optional[List[Message]] = None
-    tool_calls: Optional[List[ToolCall]] = None
     start_time: Optional[float] = None
     end_time: Optional[float] = None
     step_number: Optional[int] = None
@@ -110,20 +98,6 @@ class ActionStep(MemoryStep):
                 )
             )
 
-        if self.tool_calls is not None:
-            messages.append(
-                Message(
-                    role=MessageRole.TOOL_CALL,
-                    content=[
-                        {
-                            "type": "text",
-                            "text": "Calling tools:\n"
-                            + str([tc.dict() for tc in self.tool_calls]),
-                        }
-                    ],
-                )
-            )
-
         if self.observations is not None:
             messages.append(
                 Message(
@@ -131,30 +105,12 @@ class ActionStep(MemoryStep):
                     content=[
                         {
                             "type": "text",
-                            "text": (
-                                f"Call id: {self.tool_calls[0].id}\n"
-                                if self.tool_calls
-                                else ""
-                            )
-                            + f"Observation:\n{self.observations}",
+                            "text": {
+                                "Call id": self.tool_calls[0].id if self.tool_calls else None,
+                                "Observation": self.observations
+                            }
                         }
                     ],
-                )
-            )
-        if self.error is not None:
-            error_message = (
-                "Error:\n"
-                + str(self.error)
-                + "\nNow let's retry: take care not to repeat previous errors! If you have retried several times, try a completely different approach.\n"
-            )
-            message_content = (
-                f"Call id: {self.tool_calls[0].id}\n" if self.tool_calls else ""
-            )
-            message_content += error_message
-            messages.append(
-                Message(
-                    role=MessageRole.TOOL_RESPONSE,
-                    content=[{"type": "text", "text": message_content}],
                 )
             )
 
@@ -189,7 +145,7 @@ class PlanningStep(MemoryStep):
             Message(
                 role=MessageRole.ASSISTANT,
                 content=[
-                    {"type": "text", "text": f"[FACTS LIST]:\n{self.facts.strip()}"}
+                    {"type": "text", "text": f"[FACTS LIST]: {self.facts.strip()}"}
                 ],
             )
         )
@@ -198,7 +154,7 @@ class PlanningStep(MemoryStep):
             messages.append(
                 Message(
                     role=MessageRole.ASSISTANT,
-                    content=[{"type": "text", "text": f"[PLAN]:\n{self.plan.strip()}"}],
+                    content=[{"type": "text", "text": f"[PLAN]: {self.plan.strip()}"}],
                 )
             )
         return messages
@@ -209,33 +165,12 @@ class TaskStep(MemoryStep):
     task: str
     task_images: Optional[List[str]] = None
 
-    def to_messages(self, summary_mode: bool = False, **kwargs) -> List[Message]:
-        content = [{"type": "text", "text": f"New task:\n{self.task}"}]
-        if self.task_images:
-            for image in self.task_images:
-                content.append({"type": "image", "image": image})
-
+    def to_messages(self) -> List[Message]:
+        content = f"{self.task}"
         return [Message(role=MessageRole.USER, content=content)]
 
-
-@dataclass
-class SystemPromptStep(MemoryStep):
-    system_prompt: str
-
-    def to_messages(self, summary_mode: bool = False, **kwargs) -> List[Message]:
-        if summary_mode:
-            return []
-        return [
-            Message(
-                role=MessageRole.SYSTEM,
-                content=[{"type": "text", "text": self.system_prompt}],
-            )
-        ]
-
-
 class AgentMemory:
-    def __init__(self, system_prompt: str):
-        self.system_prompt = SystemPromptStep(system_prompt=system_prompt)
+    def __init__(self):
         self.steps: List[Union[TaskStep, ActionStep, PlanningStep]] = []
 
     def reset(self):
@@ -264,13 +199,7 @@ class AgentMemory:
         """
         logger.console.log("Replaying the agent's steps:")
         for step in self.steps:
-            if isinstance(step, SystemPromptStep) and detailed:
-                logger.log_markdown(
-                    title="System prompt",
-                    content=step.system_prompt,
-                    level=LogLevel.ERROR,
-                )
-            elif isinstance(step, TaskStep):
+            if isinstance(step, TaskStep):
                 logger.log_task(step.task, "", level=LogLevel.ERROR)
             elif isinstance(step, ActionStep):
                 logger.log_rule(f"Step {step.step_number}", level=LogLevel.ERROR)
@@ -287,7 +216,7 @@ class AgentMemory:
                     logger.log_messages(step.model_input_messages, level=LogLevel.ERROR)
                 logger.log_markdown(
                     title="Agent output:",
-                    content=step.facts + "\n" + step.plan,
+                    content=step.facts + " " + step.plan,
                     level=LogLevel.ERROR,
                 )
 
