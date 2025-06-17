@@ -1,46 +1,51 @@
-
+# Tool Parameters
 tool:
-  DISABLE_ARM: true                                     # Disable arm tool
-  DISABLE_CAMERA: true                                  # Disable camera tool
-  DISABLE_CHASSIS: true                                 # Disable chassis tool
-  ERROR_PROBABILITY: 0                                  # Probability of error in tool execution
+  # Disable arm tool
+  DISABLE_ARM: true
+  # Disable camera tool
+  DISABLE_CAMERA: true
+  # Disable chassis tool
+  DISABLE_CHASSIS: true
+  # Probability of error in tool execution
+  ERROR_PROBABILITY: 0
 
+# Cloud Server Infos
 model:
-  MODEL_SELECT: "robobrain"                             # Model name for the cloud server
-  MODEL_RETRY_PLANNING: 5                               # Number of retries for planning
+  # Model name for the cloud server
+  MODEL_SELECT: "/workspace/model/BAAI/RoboBrain2.0-7B"
+  # Number of retries for planning
+  MODEL_RETRY_PLANNING: 5
   MODEL_LIST:
-    - CLOUD_MODEL: "robobrain"                          # Model name for the cloud server
-      CLOUD_TYPE: "default"                             # Deploy for the cloud server
-      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
-      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
-      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
+    - # Model name for the cloud server
+      CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
+      # Deploy for the cloud server
+      CLOUD_TYPE: "default"
+      # API key for the cloud server
+      CLOUD_API_KEY: "EMPTY"
+      # URL of the cloud server
+      CLOUD_SERVER: "http://localhost:4567/v1/"
+      # Maximum number of chat messages to keep in memory
+      MAX_CHAT_MESSAGE: 50
 
-    - CLOUD_MODEL: "deepseekv3"                         # Model name for the cloud server
-      CLOUD_TYPE: "default"                             # Deploy for the cloud server
-      CLOUD_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
-      CLOUD_SERVER: "YOUR-CLOUD-SERVER-URL"             # URL of the cloud server
-      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
-
-    - CLOUD_MODEL: "gemini"                             # Model name for the cloud server
-      CLOUD_TYPE: "azure"                               # Deploy for the cloud server
-      AZURE_ENDPOINT: "YOUR-ENDPOINT"                   # Azure endpoint for the cloud server
-      AZURE_DEPLOYMENT: "YOUR_DEPLOYMENT"               # Azure deployment name for the cloud server
-      AZURE_API_KEY: "YOUR-API-KEY"                     # API key for the cloud server
-      AZURE_API_VERSION: "YOUR-API-VERSION"             # API version for the cloud server
-      MAX_CHAT_MESSAGE: 50                              # Maximum number of chat messages to keep in memory
-
-
-
+# Communicator Parameters
 communicator:
-  HOST: "127.0.0.1"                                   # Hostname or IP address of the server
-  PORT: 6379                                          # Port number of the server
-  DB: 0                                               # database number
-  CLEAR: false                                        # Whether clear the database on startup
-  PASSWORD: "baai-roboos"                                        # Password for server
+  # Hostname or IP address of the server
+  HOST: "127.0.0.1"
+  # Port number of the server
+  PORT: 6379
+  # database number
+  DB: 0
+  # Whether clear the database on startup
+  CLEAR: false
+  # Password for server
+  PASSWORD: ""
 
-
+# Camera Parameters
 camera:
-  IMAGE_PATH: "./images/"
+  # Path to save camera images
+  IMAGE_PATH: "images/"
 
+# Profile Parameters
 profile:
-  PATH: "./robot_tools/robot_profile.yaml"
+  # Path to the robot profile file
+  PATH: "robot_tools/robot_profile.yaml"
