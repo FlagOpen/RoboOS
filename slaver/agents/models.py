@@ -165,9 +165,9 @@ def get_clean_message_list(
             assert isinstance(message["content"], list), "Error: wrong content:" + str(
                 message["content"]
             )
-            Observation = " , Observation:" + message["content"][0]["text"]["Observation"]
+            Observation = "," + message["content"][0]["text"]["Observation"]
             if type(output_message_list[-1]["content"]) is str:
-                output_message_list[-1]["content"] += Observation
+                output_message_list[-1]["content"] += ". Current Status: " + Observation
             else:
                 output_message_list[-1]["content"][0]["text"] += Observation
         else:
