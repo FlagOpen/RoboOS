@@ -11,8 +11,7 @@ async def navigate_to_target(target: str) -> str:
     Args:
         target: String, Represents the navigation destination.
     """
-    # return f"Navigate to {target} success"
-    return {"status": "success", "message": "success"}
+    return f"Navigate to {target} success"
 
 @mcp.tool()
 async def grasp_object(object: str) -> str:

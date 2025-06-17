@@ -9,13 +9,11 @@ import time
 from contextlib import AsyncExitStack
 from datetime import datetime
 from typing import Dict, List, Optional
-
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from flag_scale.flagscale.agent.communication import Communicator
-from tools.utils import config
+from tools.utils import config, communicator
 
 
 class RobotManager:
@@ -32,7 +30,7 @@ class RobotManager:
             model_initializer: AI model initialization function
             config: System configuration dictionary
         """
-        self.communicator = self._init_coummunicator()
+        self.communicator = communicator
         self.heartbeat_interval = 60
         self.lock = threading.Lock()
         self.model = self._gat_model_info_from_config()
@@ -40,15 +38,6 @@ class RobotManager:
         self.tools_path = None
         self._prewarm_model()
 
-    def _init_coummunicator(self):
-        return  Communicator(
-            host=config["communicator"]["HOST"],
-            port=config["communicator"]["PORT"],
-            db=config["communicator"]["DB"],
-            clear=config["communicator"]["CLEAR"],
-            password=config["communicator"]["PASSWORD"],
-        )
-         
 
     def _prewarm_model(self):
         """Pre-warm the model to avoid atexit-related issues"""

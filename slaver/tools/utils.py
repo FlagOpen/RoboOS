@@ -30,7 +30,8 @@ import types
 from functools import lru_cache
 from io import BytesIO
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict
+from flag_scale.flagscale.agent.communication import Communicator
 
 
 if TYPE_CHECKING:
@@ -177,5 +178,12 @@ class Config:
             config = yaml.safe_load(f)
         return config
 
-
 config = Config.load_config()
+
+communicator =  Communicator(
+    host=config["communicator"]["HOST"],
+    port=config["communicator"]["PORT"],
+    db=config["communicator"]["DB"],
+    clear=config["communicator"]["CLEAR"],
+    password=config["communicator"]["PASSWORD"],
+)

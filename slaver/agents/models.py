@@ -194,12 +194,17 @@ def get_tool_call_from_text(
             ) from e
     
     try:
-        tool_name = tool_call_dictionary[tool_name_key]
+        if tool_call_dictionary.get("type"):
+            tool_name = tool_call_dictionary[tool_call_dictionary["type"]][tool_name_key]
+            tool_arguments = tool_call_dictionary[tool_call_dictionary["type"]].get(tool_arguments_key, None)
+        else:
+            tool_name = tool_call_dictionary[tool_name_key]
+            tool_arguments = tool_call_dictionary.get(tool_arguments_key, None)
     except Exception as e:
         raise ValueError(
             f"Key {tool_name_key=} not found in the generated tool call. Got keys: {list(tool_call_dictionary.keys())} instead"
         ) from e
-    tool_arguments = tool_call_dictionary.get(tool_arguments_key, None)
+
     tool_arguments = parse_json_if_needed(tool_arguments)
     return ChatMessageToolCall(
         id=str(uuid.uuid4()),

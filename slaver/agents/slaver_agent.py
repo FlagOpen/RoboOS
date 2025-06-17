@@ -70,7 +70,7 @@ class MultiStepAgent:
         max_steps: int = 20,
         verbosity_level: LogLevel = LogLevel.INFO,
         step_callbacks: Optional[List[Callable]] = None,
-        log_file: Optional[str] = None,
+        log_file: Optional[str] = None
     ):
         self.tools = tools
         self.prompt_templates = prompt_templates
@@ -252,7 +252,11 @@ You have been provided with these additional arguments, that you can access usin
         result = func(**arguments)
             
         return result
-    
+
+    def _build_environment_prompt(self):
+        """Splicing environmental information"""
+        raise NotImplementedError
+
     def write_memory_to_messages(
         self,
         summary_mode: Optional[bool] = False,
@@ -262,12 +266,14 @@ You have been provided with these additional arguments, that you can access usin
         that can be used as input to the LLM. Adds a number of keywords (such as PLAN, error, etc) to help
         the LLM.
         """
+        environment_prompt = self._build_environment_prompt()
         messages = [
             Message(
                 role=MessageRole.SYSTEM,
-                content=[{"type": "text", "text": self.system_prompt}]
+                content=[{"type": "text", "text": self.system_prompt + f"\n{environment_prompt}"}]
             )
         ]
+        
         for memory_step in self.memory.steps:
             messages.extend(memory_step.to_messages(summary_mode=summary_mode))
         return messages
@@ -309,6 +315,40 @@ class ToolCallingAgent(MultiStepAgent):
             prompt_templates=prompt_templates,
             **kwargs,
         )
+        
+    def _build_environment_prompt(self) -> str:
+        robot_info = self.communicator.retrieve(f"ROBOT_INFO_{self.robot_name}")
+        if not robot_info:
+            return None
+        current_position = robot_info["current_position"]
+        navigate_position = robot_info["navigate_position"]
+        robot_holding = robot_info.get("robot_holding", "")
+        
+        current_scene_info = self.communicator.gat_all_values("SCENE_INFO_*")
+
+        prompt_lines = []
+
+        prompt_lines.append(f"The robot is currently at: **{current_position}**.")
+        prompt_lines.append(f"The robot can navigate to: {', '.join(navigate_position)}.")
+
+        prompt_lines.append("The scene contains the following receptacles and their objects:")
+        for recep in current_scene_info:
+            name = recep["recep_name"]
+            rtype = recep["recep_type"]
+            objects = recep["recep_object"]
+            obj_str = ", ".join(objects) if objects else "nothing"
+            prompt_lines.append(f"- {name} ({rtype}): {obj_str}")
+
+        if robot_holding:
+            prompt_lines.append(f"The robot is currently holding: {robot_holding}.")
+        else:
+            prompt_lines.append("The robot is not holding any object.")
+
+        prompt_lines.append("Use this environment context to make decisions.")
+
+        return "\n".join(prompt_lines)
+    
+    
         
 
     def _handle_final_answer(self, tool_arguments: str, memory_step: ActionStep) -> Union[str, None]:

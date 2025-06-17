@@ -1,3 +1,6 @@
+from tools.state_decorator import record_state
+
+@record_state("navigated")
 def navigate_to_target(target: str) -> str:
     """Navigate to target
     Args:
@@ -7,6 +10,7 @@ def navigate_to_target(target: str) -> str:
     print(ret)
     return ret
 
+@record_state("grasped")
 def grasp_object(object: str) -> str:
     """Pick up the object
     Args:
@@ -16,6 +20,7 @@ def grasp_object(object: str) -> str:
     print(ret)
     return ret
 
+@record_state("placed")
 def place_to_affordance(affordance: str, object: str=None) -> str:
     """Place the grasped object in affordance
     Args:
