@@ -2,8 +2,6 @@
 tool:
   # Has the model undergone targeted training on tool_calls
   SUPPORT_TOOL_CALLS: false
-  # Probability of error in tool execution
-  ERROR_PROBABILITY: 0
 
 # Cloud Server Infos
 model:

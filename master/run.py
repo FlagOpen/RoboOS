@@ -17,16 +17,6 @@ def send_text_to_forntend(text):
     socketio.emit("text_update", {"data": text}, namespace="/")
     
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/js/<path:filename>")
-def js_file(filename):
-    return send_from_directory("templates/js", filename)
-    
-
 @app.route("/system_status", methods=["GET"])
 def system_status():
     """

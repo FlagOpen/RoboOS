@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional
 from tools.utils import (
     encode_image_base64,
     make_image_url,
+    config
 )
 
 logger = logging.getLogger(__name__)
@@ -454,8 +455,8 @@ class OpenAIServerModel(Model):
                 include={"role", "content", "tool_calls"}
             )
         )
-        # TODO: Add SUPPORT_TOOL_CALLS
-        first_message = convert_chat_message(first_message)
+        if config["tool"]["SUPPORT_TOOL_CALLS"] == True:
+            first_message = convert_chat_message(first_message)
         first_message.raw = response
         return first_message
 

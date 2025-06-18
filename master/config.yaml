@@ -44,14 +44,6 @@ model:
       # Maximum number of chat messages to keep in memory
       MAX_CHAT_MESSAGE: 50
 
-# Tool Parameters for mocking
-tool:
-  # Disable arm tool for mocking
-  DISABLE_ARM: true
-  # Disable camera tool for mocking
-  DISABLE_CAMERA: true
-  # Disable chassis tool for mocking
-  DISABLE_CHASSIS: true
 
 # Communicator Parameters
 communicator:
