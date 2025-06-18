@@ -313,6 +313,59 @@ class Model:
                 )
         return model_dictionary
 
+
+from dataclasses import dataclass
+import json
+import uuid
+import re
+
+@dataclass
+class FunctionCall:
+    name: str
+    arguments: str
+    description: str = None
+
+@dataclass
+class ToolCall:
+    id: str
+    type: str
+    function: FunctionCall
+
+def convert_chat_message(original_message):
+    content = original_message.content
+    
+    core_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+    core_content = re.sub(r'<answer>(.*?)</answer>', r'\1', core_content, flags=re.DOTALL).strip()
+    
+    if core_content.startswith('```json') and core_content.endswith('```'):
+        json_str = core_content[7:-3].strip()
+        try:
+            parsed_data = json.loads(json_str)
+            return ChatMessage(
+                role='assistant',
+                content=None,
+                tool_calls=[ToolCall(
+                    id=f'call_{uuid.uuid4().hex}',
+                    type='function',
+                    function=FunctionCall(
+                        name=parsed_data['name'],
+                        arguments=json.dumps(parsed_data['arguments']),
+                        description=None
+                    )
+                )],
+                raw=None
+            )
+        except json.JSONDecodeError:
+            pass
+    
+    return ChatMessage(
+        role='assistant',
+        content=core_content,
+        tool_calls=[],
+        raw=None
+    )
+
+
 class OpenAIServerModel(Model):
     """This model connects to an OpenAI-compatible API server.
 
@@ -401,6 +454,8 @@ class OpenAIServerModel(Model):
                 include={"role", "content", "tool_calls"}
             )
         )
+        # TODO: Add SUPPORT_TOOL_CALLS
+        first_message = convert_chat_message(first_message)
         first_message.raw = response
         return first_message
 

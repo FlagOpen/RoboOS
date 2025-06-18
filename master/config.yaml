@@ -62,7 +62,7 @@ communicator:
   # database number
   DB: 0
   # Whether clear the database on startup
-  CLEAR: false
+  CLEAR: true
   # Password for server
   PASSWORD: ""
 
