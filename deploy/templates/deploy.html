@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoboOS - One click deployment console</title>
+    <link rel="stylesheet" href="js/all.min.css" />
+    <link rel="stylesheet" href="js/atom-one-dark.min.css">
+    <script src="js/highlight.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4ed7e5;
+            --secondary: #4a99e3;
+            --accent: #937ae7;
+            --success: #4be1b0;
+            --warning: #ffc266;
+            --danger: #f26d7d;
+            --light: #f5faff;
+            --dark: #2a2f3a;
+            --bg-dark: #333945;
+            --bg-darker: #2b2f3a;
+            --text-primary: #f0f4fa;
+            --text-secondary: #b0c4d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        @font-face {
+            font-family: 'Rajdhani';
+            src: url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.04) 0%, transparent 25%),
+                radial-gradient(circle at 80% 70%, rgba(0, 136, 255, 0.04) 0%, transparent 25%),
+                linear-gradient(to bottom, var(--bg-dark), var(--bg-darker));
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .title-bar {
+            width: 100%;
+            height: 80px;
+            background: rgba(10, 14, 23, 0.8);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+            backdrop-filter: blur(5px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .title-bar::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.3;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .logo i {
+            margin-right: 0.5rem;
+            filter: drop-shadow(0 0 5px var(--primary));
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            margin-left: 1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            height: calc(100% - 80px);
+            padding: 20px;
+        }
+
+        .config-area {
+            width: 50%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: rgba(10, 14, 23, 0.5);
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: 8px 0 0 8px;
+        }
+
+        .log-area {
+            width: 50%;
+            height: 100%;
+            overflow-y: auto;
+            background: rgba(10, 14, 23, 0.5);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-card {
+            background: rgba(15, 20, 35, 0.6);
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .config-card h3 {
+            margin-top: 0;
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+
+        .config-card h3 i {
+            margin-right: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(5, 9, 15, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+        }
+
+        .form-help {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            background: rgba(0, 240, 255, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--bg-dark);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            box-shadow: 0 2px 15px rgba(0, 240, 255, 0.5);
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .log-output {
+            flex: 1;
+            background: rgba(5, 9, 15, 0.8);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: var(--success);
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+        }
+
+        .log-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            box-shadow: 0 0 5px currentColor;
+        }
+
+        .online {
+            background-color: var(--success);
+            color: var(--success);
+        }
+
+        .busy {
+            background-color: var(--warning);
+            color: var(--warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        .offline {
+            background-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 240, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            width: 0;
+            transition: width 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.8),
+                    transparent);
+            animation: progressShine 2s infinite;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        @keyframes progressShine {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .config-area,
+            .log-area {
+                width: 100%;
+                height: auto;
+            }
+
+            .config-area {
+                border-right: none;
+                border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+                border-radius: 8px 8px 0 0;
+            }
+            
+            .log-area {
+                border-radius: 0 0 8px 8px;
+            }
+        }
+
+        .deployment-steps {
+            display: flex;
+            margin-bottom: 20px;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .deployment-steps::before {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(0, 240, 255, 0.2);
+            z-index: 1;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 240, 255, 0.1);
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        .step.active .step-number {
+            background: var(--primary);
+            color: var(--bg-dark);
+            border-color: var(--primary);
+        }
+
+        .step.completed .step-number {
+            background: var(--success);
+            color: var(--bg-dark);
+            border-color: var(--success);
+        }
+
+        .step-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .step.active .step-label {
+            color: var(--primary);
+        }
+
+        .step.completed .step-label {
+            color: var(--success);
+        }
+
+        .collapse-panel {
+            margin-bottom: 15px;
+        }
+
+        .collapse-header {
+            padding: 10px 15px;
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapse-header:hover {
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .collapse-header h4 {
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .collapse-content {
+            padding: 15px;
+            background: rgba(5, 9, 15, 0.5);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            display: none;
+        }
+
+        .collapse-panel.active .collapse-content {
+            display: block;
+        }
+
+        .config-editor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .config-editor.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .editor-container {
+            width: 85%;
+            height: 85%;
+            background: #282c34;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .config-editor.active .editor-container {
+            transform: scale(1);
+        }
+
+        .editor-header {
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .editor-header i {
+            color: var(--primary);
+        }
+
+        .editor-body {
+            flex: 1;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .editor-footer {
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(0, 240, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .code-editor-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+        }
+
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+            text-align: right;
+            padding: 10px 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            user-select: none;
+        }
+
+        #config-content {
+            width: calc(100% - 40px);
+            height: 100%;
+            padding: 10px;
+            margin-left: 40px;
+            background: transparent;
+            border: none;
+            color: #abb2bf;
+            font-family: 'Fira Code', monospace, 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            resize: none;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        #config-content:focus {
+            outline: none;
+        }
+
+        
+        .hljs {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        .view-config-btn {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+
+        
+        .badge {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+        }
+
+        .badge-primary {
+            color: #fff;
+            background-color: var(--primary);
+        }
+
+        .badge-secondary {
+            color: #fff;
+            background-color: var(--secondary);
+        }
+
+        
+        .editor-status {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .editor-status i {
+            font-size: 0.9rem;
+        }
+
+        
+        .search-panel {
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .search-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        
+        .shortcut-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="logo">
+            <img src="/assets/images/logo.png" alt="RoboOS Logo"
+                style="height: 60px; vertical-align: middle; margin-right: 10px;">
+            <span>RoboOS</span>
+            <span class="subtitle">One click deployment console</span>
+        </div>
+        <div class="user-info">
+            <span>Docker Container deployment</span>
+            <span id="container-status" class="status-indicator offline"></span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="config-area">
+            <h2><i class="fas fa-cog"></i> Deployment configuration</h2>
+            <p class="form-help">Based on the out of the box RoboOS image, achieve one click startup deployment</p>
+            
+            <div class="deployment-steps">
+                <div class="step active" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Configuration Check</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Start inference service</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Start Master</div>
+                </div>
+                <div class="step" id="step4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Start Slaver</div>
+                </div>
+                <div class="step" id="step5">
+                    <div class="step-number">5</div>
+                    <div class="step-label">complete</div>
+                </div>
+            </div>
+
+            <div class="config-card">
+                <h3><i class="fas fa-server"></i> Inference service configuration</h3>
+                <div class="form-group">
+                    <label for="model-path">Model Path</label>
+                    <input type="text" id="model-path" class="form-control" placeholder="/home/gw/qwen/Qwen2.5-VL-7B-Instruct" value="/home/gw/qwen/Qwen2.5-VL-7B-Instruct">
+                    <p class="form-help">The model name should be consistent with the configuration file for automatic matching</p>
+                </div>
+                <div class="form-group">
+                    <label for="inference-port">Service port</label>
+                    <input type="number" id="inference-port" class="form-control" placeholder="7000" value="7000">
+                </div>
+            </div>
+
+            <div class="collapse-panel active">
+                <div class="collapse-header">
+                    <h4><i class="fas fa-code-branch"></i> Advanced</h4>
+                    <i class="fas fa-chevron-up"></i>
+                </div>
+                <div class="collapse-content">
+                    <div class="config-card">
+                        <h3><i class="fas fa-crown"></i> Master node configuration</h3>
+                        <div class="form-group">
+                            <label for="master-config">Profile Path</label>
+                            <input type="text" id="master-config" class="form-control" placeholder="/home/gw/code/RoboOS/master/config.yaml" value="/home/gw/code/RoboOS/master/config.yaml">
+                            <p class="form-help">The image has built-in full configuration</p>
+                            <button class="btn btn-sm view-config-btn" onclick="viewConfig('master')">
+                                <i class="fas fa-file-code"></i> View/Edit Configuration Files
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="config-card">
+                        <h3><i class="fas fa-microchip"></i> Slaver node configuration</h3>
+                        <div class="form-group">
+                            <label for="slaver-config">Profile Path</label>
+                            <input type="text" id="slaver-config" class="form-control" placeholder="/home/gw/code/RoboOS/slaver/config.yaml" value="/home/gw/code/RoboOS/slaver/config.yaml">
+                            <p class="form-help">The image has built-in full configuration</p>
+                            <button class="btn btn-sm view-config-btn" onclick="viewConfig('slaver')">
+                                <i class="fas fa-file-code"></i> View/Edit Configuration Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-card">
+                <h3><i class="fas fa-play"></i> Deployment Control</h3>
+                <div class="progress-container">
+                    <div class="progress-bar" id="deploy-progress" style="width: 0%"></div>
+                </div>
+                <button id="start-deploy" class="btn btn-primary btn-block" style="margin-top: 15px;">
+                    <i class="fas fa-rocket"></i> Start deployment
+                </button>
+            </div>
+        </div>
+
+        <div class="log-area">
+            <h2><i class="fas fa-terminal"></i> Deployment Log</h2>
+            <div class="log-output" id="deploy-log">
+RoboOS The deployment console is ready
+=========================
+                
+Waiting for deployment to begin...
+            </div>
+            <div class="log-controls">
+                <button id="clear-log" class="btn">
+                    <i class="fas fa-trash"></i> Clear logs
+                </button>
+                <button id="copy-log" class="btn">
+                    <i class="fas fa-copy"></i> Copy Log
+                </button>
+                <button id="save-log" class="btn">
+                    <i class="fas fa-save"></i> Save Log
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-editor" id="config-editor">
+        <div class="editor-container">
+            <div class="editor-header">
+                <h3><i class="fas fa-file-code"></i> <span id="editor-title">Profile Editor</span></h3>
+                <span class="badge badge-primary" id="config-type-badge">Master</span>
+            </div>
+            
+            <div class="search-panel" id="search-panel">
+                <input type="text" class="search-input" id="search-input" placeholder="search...">
+                <button class="btn btn-sm" onclick="findNext()">
+                    <i class="fas fa-search"></i> find
+                </button>
+                <span class="search-count" id="search-count"></span>
+            </div>
+            
+            <div class="editor-body">
+                <div class="code-editor-container">
+                    <div class="line-numbers" id="line-numbers">1</div>
+                    <textarea id="config-content" spellcheck="false"></textarea>
+                </div>
+            </div>
+            
+            <div class="editor-footer">
+                <div class="editor-status">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="editor-status">ready</span>
+                </div>
+                <div class="editor-actions">
+                    <button class="btn" onclick="closeEditor()">
+                        <i class="fas fa-times"></i> cancel (Esc)
+                    </button>
+                    <button class="btn btn-primary" onclick="saveConfig()">
+                        <i class="fas fa-save"></i> Save changes (Ctrl+S)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        let currentEditingConfig = '';
+        let currentSearchTerm = '';
+        let currentSearchIndex = 0;
+        let searchResults = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+
+            setTimeout(() => {
+                document.getElementById('container-status').className = 'status-indicator online';
+            }, 1000);
+
+            const collapseHeaders = document.querySelectorAll('.collapse-header');
+            collapseHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const panel = header.parentElement;
+                    panel.classList.toggle('active');
+                    const icon = header.querySelector('i');
+                    if (panel.classList.contains('active')) {
+                        icon.className = 'fas fa-chevron-up';
+                    } else {
+                        icon.className = 'fas fa-chevron-down';
+                    }
+                });
+            });
+
+            document.getElementById('clear-log').addEventListener('click', () => {
+                document.getElementById('deploy-log').textContent = 'The log has been cleared\n\n';
+            });
+
+            document.getElementById('copy-log').addEventListener('click', () => {
+                const logContent = document.getElementById('deploy-log').textContent;
+                navigator.clipboard.writeText(logContent).then(() => {
+                    appendLog('The log has been copied to the clipboard');
+                });
+            });
+
+            document.getElementById('save-log').addEventListener('click', () => {
+                const logContent = document.getElementById('deploy-log').textContent;
+                const blob = new Blob([logContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'roboos-deploy.log';
+                a.click();
+                URL.revokeObjectURL(url);
+                appendLog('The log has been saved as roboos-deploy.log');
+            });
+
+            document.getElementById('start-deploy').addEventListener('click', startDeployment);
+
+            initCodeEditor();
+
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    viewConfig('master');
+                }
+                
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    viewConfig('slaver');
+                }
+                
+                if (e.ctrlKey && e.key === 's' && document.getElementById('config-editor').classList.contains('active')) {
+                    e.preventDefault();
+                    saveConfig();
+                }
+
+                if (e.key === 'Escape' && document.getElementById('config-editor').classList.contains('active')) {
+                    e.preventDefault();
+                    closeEditor();
+                }
+                
+                if (e.key === 'Enter' && document.activeElement === document.getElementById('search-input')) {
+                    e.preventDefault();
+                    findNext();
+                }
+            });
+        });
+
+        function initCodeEditor() {
+            const textarea = document.getElementById('config-content');
+            
+            textarea.addEventListener('input', updateLineNumbers);
+            textarea.addEventListener('scroll', syncLineNumbersScroll);
+            
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    
+                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                    
+                    this.selectionStart = this.selectionEnd = start + 4;
+                    
+                    updateLineNumbers();
+                }
+            });
+            
+            document.getElementById('search-input').addEventListener('input', function() {
+                currentSearchTerm = this.value;
+                if (currentSearchTerm) {
+                    performSearch();
+                } else {
+                    clearSearch();
+                }
+            });
+        }
+
+        function updateLineNumbers() {
+            const textarea = document.getElementById('config-content');
+            const lineNumbers = document.getElementById('line-numbers');
+            const lines = textarea.value.split('\n');
+            
+            let lineNumbersHtml = '';
+            for (let i = 1; i <= lines.length; i++) {
+                lineNumbersHtml += i + '<br>';
+            }
+            
+            lineNumbers.innerHTML = lineNumbersHtml;
+            updateEditorStatus(`rows: ${lines.length} | characters: ${textarea.value.length}`);
+        }
+
+        function syncLineNumbersScroll() {
+            const textarea = document.getElementById('config-content');
+            const lineNumbers = document.getElementById('line-numbers');
+            lineNumbers.scrollTop = textarea.scrollTop;
+        }
+
+        function viewConfig(configType) {
+            currentEditingConfig = configType;
+            const editor = document.getElementById('config-editor');
+            const title = document.getElementById('editor-title');
+            const badge = document.getElementById('config-type-badge');
+            const content = document.getElementById('config-content');
+            
+            title.textContent = `${configType === 'master' ? 'Master' : 'Slaver'} node configuration`;
+            badge.textContent = configType === 'master' ? 'Master' : 'Slaver';
+            badge.className = configType === 'master' ? 'badge badge-primary' : 'badge badge-secondary';
+
+            fetch(`/config?path=${encodeURIComponent(document.getElementById(`${configType}-config`).value)}`)
+                .then(response => response.json())
+                .then(data => {
+
+                    if (data.status == 400) {
+                        alert(data.message);
+                    } else {
+                        const configText = jsonToConfigFormat(data.data);
+                        content.value = configText;
+                        
+
+                        editor.classList.add('active');
+                        
+                        setTimeout(() => {
+                            content.focus();
+                            updateLineNumbers();
+                            highlightSyntax();
+                        }, 100);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to obtain configuration:', error);
+                    alert('Failed to retrieve configuration file, please check network connection');
+                });
+        }
+
+
+        function jsonToConfigFormat(jsonData) {
+            let configText = `# ${currentEditingConfig === 'master' ? 'Master' : 'Slaver'} node configuration\n\n`;
+            
+
+            for (const [section, settings] of Object.entries(jsonData)) {
+                configText += `[${section}]\n`;
+                
+
+                for (const [key, value] of Object.entries(settings)) {
+                    if (Array.isArray(value)) {
+
+                        value.forEach((item, index) => {
+                            for (const [subKey, subValue] of Object.entries(item)) {
+                                configText += `${key}.${subKey} = ${formatValue(subValue)}\n`;
+                            }
+                        });
+                    } else {
+                        configText += `${key} = ${formatValue(value)}\n`;
+                    }
+                }
+                
+                configText += '\n';
+            }
+            
+            return configText;
+        }
+
+        function formatValue(value) {
+            if (typeof value === 'string') {
+
+                return `"${value}"`;
+            } else if (typeof value === 'boolean') {
+
+                return value ? 'true' : 'false';
+            }
+            return value;
+        }
+
+
+        function closeEditor() {
+            document.getElementById('config-editor').classList.remove('active');
+            clearSearch();
+            updateEditorStatus('ready');
+        }
+
+
+        function saveConfig() {
+            const configText = document.getElementById('config-content').value;
+            
+            try {
+
+                const configJson = configToJsonFormat(configText);
+
+                const data_json = {
+                    file_path: document.getElementById(`${currentEditingConfig}-config`).value,
+                    config_data: configJson,
+                    node: `${currentEditingConfig}`
+                };
+                
+
+                fetch(`/saveconfig`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data_json)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    appendLog(`${currentEditingConfig === 'master' ? 'Master' : 'Slaver'} The configuration file has been updated`);
+                    updateEditorStatus('Configuration saved');
+                    setTimeout(() => closeEditor(), 1000);
+                })
+                .catch(error => {
+                    console.error('Failed to save configuration:', error);
+                    updateEditorStatus('Save failed');
+                });
+            } catch (e) {
+                console.error('Configuration file format error:', e);
+                updateEditorStatus('Error: Invalid configuration file format');
+            }
+        }
+
+
+        function configToJsonFormat(configText) {
+            const result = {};
+            let currentSection = null;
+            
+            const lines = configText.split('\n');
+            
+            lines.forEach(line => {
+
+                if (!line.trim() || line.trim().startsWith('#')) return;
+                
+
+                const sectionMatch = line.match(/^\[([^\]]+)\]/);
+                if (sectionMatch) {
+                    currentSection = sectionMatch[1];
+                    result[currentSection] = {};
+                    return;
+                }
+                
+
+                if (currentSection && line.includes('=')) {
+                    const [key, value] = line.split('=').map(part => part.trim());
+                    result[currentSection][key] = parseValue(value);
+                }
+            });
+            
+            return result;
+        }
+
+
+        function parseValue(value) {
+
+            if (value === 'true') return true;
+            if (value === 'false') return false;
+            
+
+            if (value.startsWith('"') && value.endsWith('"')) {
+                return value.slice(1, -1);
+            }
+
+            if (!isNaN(value)) return Number(value);
+            
+            return value;
+        }
+
+
+        function updateEditorStatus(message) {
+            document.getElementById('editor-status').textContent = message;
+        }
+
+
+        function highlightSyntax() {
+            const textarea = document.getElementById('config-content');
+            const code = textarea.value;
+            const language = 'ini'; 
+            
+  
+            const highlighted = hljs.highlight(code, { language });
+            textarea.nextElementSibling.innerHTML = highlighted.value;
+        }
+
+ 
+        function performSearch() {
+            const textarea = document.getElementById('config-content');
+            const content = textarea.value;
+            const searchTerm = currentSearchTerm.toLowerCase();
+            
+            if (!searchTerm) {
+                clearSearch();
+                return;
+            }
+            
+
+            const lines = content.split('\n');
+            searchResults = [];
+            
+            lines.forEach((line, lineIndex) => {
+                const index = line.toLowerCase().indexOf(searchTerm);
+                if (index !== -1) {
+                    searchResults.push({
+                        line: lineIndex + 1,
+                        index: index,
+                        length: searchTerm.length
+                    });
+                }
+            });
+            
+
+            document.getElementById('search-count').textContent = 
+                searchResults.length > 0 ? `${currentSearchIndex + 1}/${searchResults.length}` : '0/0';
+            
+
+            if (searchResults.length > 0) {
+                currentSearchIndex = 0;
+                highlightCurrentSearch();
+            } else {
+                updateEditorStatus('No matches found');
+            }
+        }
+
+
+        function findNext() {
+            if (searchResults.length === 0) {
+                performSearch();
+                return;
+            }
+            
+            currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+            document.getElementById('search-count').textContent = `${currentSearchIndex + 1}/${searchResults.length}`;
+            highlightCurrentSearch();
+        }
+
+
+        function highlightCurrentSearch() {
+            if (searchResults.length === 0) return;
+            
+            const result = searchResults[currentSearchIndex];
+            const textarea = document.getElementById('config-content');
+            const lines = textarea.value.split('\n');
+            
+
+            let pos = 0;
+            for (let i = 0; i < result.line - 1; i++) {
+                pos += lines[i].length + 1; // +1 for newline
+            }
+            pos += result.index;
+            
+
+            textarea.focus();
+            textarea.setSelectionRange(pos, pos + result.length);
+            
+
+            const lineHeight = 20; 
+            const visibleLines = Math.floor(textarea.clientHeight / lineHeight);
+            const scrollToLine = Math.max(0, result.line - Math.floor(visibleLines / 2));
+            textarea.scrollTop = scrollToLine * lineHeight;
+        }
+
+
+        function clearSearch() {
+            currentSearchTerm = '';
+            currentSearchIndex = 0;
+            searchResults = [];
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-count').textContent = '';
+        }
+
+
+        function appendLog(message) {
+            const logElement = document.getElementById('deploy-log');
+            logElement.textContent += '\n' + message;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+
+        let deploymentStatus = {
+            currentStep: 0,
+            steps: [
+                { name: 'Configuration Check', endpoint: '/api/validate-config' },
+                { name: 'Start inference service', endpoint: '/api/start-inference' },
+                { name: 'Start Master', endpoint: '/api/start-master' },
+                { name: 'Start Slaver', endpoint: '/api/start-slaver' }
+            ]
+        };
+
+        async function startDeployment() {
+            const btn = document.getElementById('start-deploy');
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> deployment...';
+                
+
+                document.getElementById('deploy-progress').style.width = '0%';
+                resetSteps();
+                
+  
+                const deploymentConfig = {
+                    model_path: document.getElementById('model-path').value,
+                    inference_port: document.getElementById('inference-port').value,
+                    master_config: document.getElementById('master-config').value,
+                    slaver_config: document.getElementById('slaver-config').value
+                };
+
+                appendLog('\n=== Start deployment RoboOS  ===');
+                
+
+                for (let i = 0; i < deploymentStatus.steps.length; i++) {
+                    deploymentStatus.currentStep = i;
+                    const step = deploymentStatus.steps[i];
+                    
+
+                    document.getElementById(`step${i+1}`).classList.add('active');
+                    appendLog(`\n[step ${i+1}/${deploymentStatus.steps.length}] ${step.name}...`);
+                    
+
+                    const result = await callDeploymentStep(step.endpoint, deploymentConfig);
+                    
+                    if (!result.success) {
+                        throw new Error(result.message || `${step.name}fail`);
+                    }
+                    
+                    appendLog(`${step.name}success: ${result.message || ''}`);
+                    appendLog(result.details || '');
+                    
+                    document.getElementById('deploy-progress').style.width = `${(i+1) * 25}%`;
+                    document.getElementById(`step${i+1}`).classList.remove('active');
+                    document.getElementById(`step${i+1}`).classList.add('completed');
+                }
+                
+                appendLog('\n=== Deployment successful ===');
+                appendLog(`Master: http://${window.location.hostname}:5000`);
+                appendLog(`Inference service: http://${window.location.hostname}:${deploymentConfig.inference_port}`);
+                document.getElementById(`step5`).classList.remove('active');
+                document.getElementById(`step5`).classList.add('completed');
+                
+                btn.innerHTML = '<i class="fas fa-check"></i> Deployment Complete';
+                btn.disabled = false;
+
+                const newBtn = btn.cloneNode(true);  
+                btn.parentNode.replaceChild(newBtn, btn);  
+
+                newBtn.addEventListener('click', () => {
+                    window.location.href = '/';
+                });
+                
+            } catch (error) {
+                console.error('deployment failed:', error);
+                appendLog(`\n!!! deployment failed: ${error.message}`);
+                document.getElementById(`step${deploymentStatus.currentStep + 1}`).classList.add('failed');
+                
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> deployment failed';
+                btn.style.backgroundColor = 'var(--danger)';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-redo"></i> redeployment';
+                    btn.style.backgroundColor = '';
+                }, 2000);
+            }
+        }
+
+
+
+        async function callDeploymentStep(endpoint, config) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP: ${response.status}`);
+                }
+                
+                return await response.json();
+                
+            } catch (error) {
+                console.error(`API [${endpoint}]:`, error);
+                throw error;
+            }
+        }
+
+        function resetSteps() {
+            const steps = document.querySelectorAll('.step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed', 'failed');
+            });
+            deploymentStatus.currentStep = 0;
+        }
+    </script>
+</body>
+</html>

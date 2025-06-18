@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoboOS - 任务控制台</title>
+    <link rel="stylesheet" href="js/all.min.css" />
+    <script src="js/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary: #4ed7e5;
+            --secondary: #4a99e3;
+            --accent: #937ae7;
+            --success: #4be1b0;
+            --warning: #ffc266;
+            --danger: #f26d7d;
+            --light: #f5faff;
+            --dark: #2a2f3a;
+            --bg-dark: #333945;
+            --bg-darker: #2b2f3a;
+            --text-primary: #f0f4fa;
+            --text-secondary: #b0c4d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        @font-face {
+            font-family: 'Rajdhani';
+            src: url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.04) 0%, transparent 25%),
+                radial-gradient(circle at 80% 70%, rgba(0, 136, 255, 0.04) 0%, transparent 25%),
+                linear-gradient(to bottom, var(--bg-dark), var(--bg-darker));
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* 标题栏样式 */
+        .title-bar {
+            width: 100%;
+            height: 100px;
+            background: rgba(10, 14, 23, 0.8);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+            backdrop-filter: blur(5px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .title-bar::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.3;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .logo i {
+            margin-right: 0.5rem;
+            filter: drop-shadow(0 0 5px var(--primary));
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            margin-left: 1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .subtask-group {
+            margin-bottom: 16px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .subtask-group h4 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #c1dd08;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .user-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            height: calc(100% - 60px);
+        }
+
+        /* 左侧任务区域 (50%) */
+        .task-area {
+            width: 50%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: rgba(10, 14, 23, 0.5);
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        /* API客户端样式 */
+        .api-client-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .api-section {
+            background: rgba(15, 20, 35, 0.6);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .api-section h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        #server-url,
+        #message {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(5, 9, 15, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        #server-url:focus,
+        #message:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+        }
+
+        #message {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        #server-response {
+            background: rgba(5, 9, 15, 0.6);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            color: var(--success);
+            min-height: 100px;
+            overflow-x: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        #server-response ol {
+            padding-left: 20px;
+        }
+
+        #server-response li {
+            margin-bottom: 6px;
+        }
+
+        #server-response li strong {
+            color: var(--primary);
+        }
+
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .api-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .api-button:hover {
+            background: rgba(0, 240, 255, 0.2);
+        }
+
+        .api-button.primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--bg-dark);
+            border: none;
+            flex: 1;
+        }
+
+        .api-button.primary:hover {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            box-shadow: 0 2px 15px rgba(0, 240, 255, 0.5);
+        }
+
+        #connection-status {
+            color: var(--danger);
+            font-size: 0.9rem;
+        }
+
+        /* 右侧状态区域 (50%) */
+        .status-area {
+            width: 50%;
+            height: 100%;
+            overflow-y: auto;
+            background: rgba(10, 14, 23, 0.5);
+            padding: 1.5rem;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* 机器人状态卡片 */
+        .status-card {
+            background: rgba(15, 20, 35, 0.6);
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            /* overflow: hidden; */
+        }
+
+        .status-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.3;
+        }
+
+        .status-card h3 {
+            margin-top: 0;
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+
+        .robot-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            background: rgba(5, 9, 15, 0.5);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .robot-item:hover {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .robot-item.active {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            box-shadow: 0 0 5px currentColor;
+        }
+
+        .online {
+            background-color: var(--success);
+            color: var(--success);
+        }
+
+        .busy {
+            background-color: var(--warning);
+            color: var(--warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        .offline {
+            background-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* 机器人任务详情卡片 (替换原来的任务队列位置) */
+        .robot-task-card {
+            background: rgba(15, 20, 35, 0.6);
+            border-radius: 8px;
+            padding: 1.25rem;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            flex: 1;
+            display: none;
+        }
+
+        .robot-task-card.show {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .task-progress {
+            margin-bottom: 1rem;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 240, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            width: 0;
+            transition: width 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.8),
+                    transparent);
+            animation: progressShine 2s infinite;
+        }
+
+        .task-steps {
+            margin-top: 1rem;
+        }
+
+        .task-step {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        .task-step:last-child {
+            border-bottom: none;
+        }
+
+        .task-step .step-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            color: var(--primary);
+        }
+
+        .task-step .step-content {
+            flex: 1;
+        }
+
+        .task-step .step-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .status-pending {
+            color: var(--warning);
+            background: rgba(255, 170, 0, 0.1);
+        }
+
+        .status-completed {
+            color: var(--success);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .status-failed {
+            color: var(--danger);
+            background: rgba(255, 45, 84, 0.1);
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        @keyframes progressShine {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* 数据流效果 */
+        .data-stream {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        .data-stream span {
+            position: absolute;
+            color: var(--primary);
+            font-family: monospace;
+            font-size: 12px;
+            animation: fall linear infinite;
+            text-shadow: 0 0 5px var(--primary);
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .task-area,
+            .status-area {
+                width: 100%;
+                height: auto;
+            }
+
+            .status-area {
+                border-left: none;
+                border-top: 1px solid rgba(0, 240, 255, 0.1);
+            }
+
+            .system-status {
+                margin-top: 1.5rem;
+            }
+        }
+
+        .api-button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .api-button.primary:hover {
+            background-color: #0056b3;
+        }
+
+        /* Voice button (青蓝色搭配) */
+        .api-button.voice-btn {
+            background-color: #17a2b8;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-button.voice-btn:hover {
+            background-color: #138496;
+        }
+
+        .api-button.voice-btn.recording {
+            background-color: #117a8b;
+            /* 录音时再深一点 */
+        }
+
+        .mic-icon {
+            font-size: 20px;
+        }
+
+        #voiceButtonText {
+            font-size: 14px;
+        }
+
+        /* Recording indicator animation */
+        .recording-indicator {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+            gap: 5px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #17a2b8;
+            animation: pulse 1.5s infinite;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.3;
+                transform: scale(0.5);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            100% {
+                opacity: 0.3;
+                transform: scale(0.5);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .task-media-preview {
+            margin-top: 20px;
+            background: #1e1e2f;
+            /* 深色背景 */
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .task-media-preview h4 {
+            margin-bottom: 8px;
+            color: #eee;
+            font-size: 16px;
+        }
+
+        .media-container-horizontal {
+            display: flex;
+            align-items: center;
+            background-color: #2a2a3f;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .media-container-horizontal img.live-video {
+            width: 50%;
+            height: auto;
+            object-fit: cover;
+            border-right: 1px solid #444;
+        }
+
+        .media-container-horizontal .media-info {
+            flex: 1;
+            padding: 8px 12px;
+            color: #ccc;
+        }
+
+        .media-container-horizontal .media-info p {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="title-bar">
+        <div class="logo">
+            <img src="/assets/images/logo.png" alt="RoboOS Logo"
+                style="height: 60px; vertical-align: middle; margin-right: 10px;">
+            RoboOS
+            <span class="subtitle">任务控制台 v2.0</span>
+        </div>
+        <div class="user-info">
+            <span class="username">管理员</span>
+            <img src="/assets/images/image.png" alt="海绵宝宝头像">
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- 左侧API控制台 (50%) -->
+        <div class="task-area">
+            <div class="api-client-container">
+                <!-- Server URL & Connection -->
+                <div class="api-section">
+                    <input id="server-url" type="text" placeholder="http://localhost:5000/publish_task"
+                        value="http://localhost:5000/publish_task">
+                    <button onclick="testConnection()" class="api-button primary">Test Connection</button>
+                    <div id="connection-status">Connection Status: Not connected</div>
+                </div>
+
+                <!-- Message Composition -->
+                <div class="api-section">
+                    <textarea id="message" rows="4" placeholder="Enter your message here..."
+                        style="font-size: 25px;" onkeydown="handleKeyPress(event)"></textarea>
+                    <div class="button-group">
+                        <button onclick="sendMessage()" class="api-button primary">Send Message</button>
+                        <button onclick="clearMessage()" class="api-button">Clear</button>
+                    </div>
+                    <div id="recordingIndicator" class="recording-indicator hidden">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+
+                <!-- Server Response -->
+                <div class="api-section">
+                    <h3>Server Response</h3>
+                    <pre id="server-response" style="font-size: 30px;">No response yet.</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧机器人状态区域 (50%) -->
+        <div class="status-area">
+            <!-- 机器人状态卡片 -->
+            <div class="status-card">
+                <h3><i class="fas fa-robot"></i> 机器人状态</h3>
+                <div id="robot-list">
+                </div>
+            </div>
+            <!-- 系统状态卡片 -->
+            <div class="status-card system-status">
+                <h3><i class="fas fa-chart-line"></i> 系统状态</h3>
+
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>CPU负载</span>
+                        <span id="cpu-load-text">--%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="cpu-load-bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>内存使用</span>
+                        <span id="memory-usage-text">--%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="memory-usage-bar" class="progress-bar" style="width: 0%; background: var(--warning);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务卡片 -->
+            <div class="robot-task-card" id="robot-task-card">
+                <div class="task-progress">
+                    <h3><i class="fas fa-tasks"></i> 当前任务</h3>
+                    <div id="robot-task-status"></div>
+                    <div class="progress-container" style="display: none;">
+                        <div class="progress-bar" id="robot-task-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="task-steps" id="robot-task-steps">
+                    <p style="color: #888;">请点击左侧任务查看详情</p>
+                </div>
+                <div class="task-media-preview">
+                    <h4><i class="fas fa-photo-video"></i> 任务媒体预览</h4>
+                    <div class="media-container-horizontal" id="mediaContainer">
+                        <!-- <img src="http://172.16.20.133:5555/get_image" alt="实时视频流" class="live-video"> -->
+                        <img src="http://172.16.20.133:5555/video_feed" alt="实时视频流" class="live-video">
+                        <!-- <img src="http://172.16.20.133:5555/get_mask" alt="参考图片" class="reference-image"> -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // let currentTaskId = null;
+        let currentTaskId = null;
+        let maskInterval = null;
+        let imageInterval = null;
+
+        function generateUUID() {
+            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function fetchSystemStatus() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const apiURL = `${protocol}//${hostname}:${port}/system_status`;
+
+            fetch(apiURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const cpuLoad = data.cpu_load;
+                    document.getElementById('cpu-load-text').textContent = `${cpuLoad}%`;
+                    document.getElementById('cpu-load-bar').style.width = `${cpuLoad}%`;
+
+                    const memoryUsage = data.memory_usage;
+                    document.getElementById('memory-usage-text').textContent = `${memoryUsage}%`;
+                    document.getElementById('memory-usage-bar').style.width = `${memoryUsage}%`;
+                })
+                .catch(error => {
+                    console.error('Error fetching system status:', error);
+                });
+        }
+        fetchSystemStatus();
+        setInterval(fetchSystemStatus, 60000);
+
+
+        window.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('server-url');
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const baseURL = `${protocol}//${hostname}:${port}/publish_task`;
+            input.value = baseURL;
+        });
+
+        function fetchRobotStatus() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const apiURL = `${protocol}//${hostname}:${port}/robot_status`;
+
+            return fetch(apiURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(robotData => {
+                    const container = document.getElementById('robot-list');
+
+                    // 先记住当前激活的机器人名
+                    const currentActiveItem = document.querySelector('.robot-item.active');
+                    const activeRobotName = currentActiveItem ? currentActiveItem.getAttribute('data-robot') : null;
+
+                    // 清空
+                    container.innerHTML = '';
+
+                    robotData.forEach(robot => {
+                        const statusText = getStatusText(robot.robot_state);
+                        const statusColor = getStatusColor(robot.robot_state);
+
+                        const item = document.createElement('div');
+                        item.className = 'robot-item';
+                        item.setAttribute('data-robot', robot.robot_name);
+                        item.setAttribute('onclick', `showRobotTask('${robot.robot_name}')`);
+
+                        // 如果机器人名等于之前激活的机器人 → 恢复active
+                        if (robot.robot_name === activeRobotName) {
+                            item.classList.add('active');
+                        }
+
+                        item.innerHTML = `
+                    <div>
+                        <span class="status-indicator ${robot.robot_state}"></span>
+                        <span>${robot.robot_name}</span>
+                    </div>
+                    <div style="color: ${statusColor}; font-weight: 500;">${statusText}</div>
+                `;
+
+                        container.appendChild(item);
+                    });
+
+                    return robotData;
+                })
+                .catch(error => {
+                    console.error('Error fetching robot status:', error);
+                    return [];
+                });
+        }
+
+
+        function getStatusText(status) {
+            if (status === 'busy') {
+                return `执行中`;
+            } else if (status === 'idle') {
+                return '待命';
+            } else if (status === 'offline') {
+                return '离线';
+            } else {
+                return '未知';
+            }
+        }
+
+        function getStatusColor(status) {
+            if (status === 'busy') {
+                return 'var(--warning)';
+            } else if (status === 'idle') {
+                return 'var(--success)';
+            } else if (status === 'offline') {
+                return 'var(--danger)';
+            } else {
+                return '#999';
+            }
+        }
+
+        setInterval(fetchRobotStatus, 10000);
+
+        function clearTaskCard() {
+            document.getElementById('robot-task-name').innerText = '暂无任务';
+            document.getElementById('robot-task-status').innerText = '';
+            document.getElementById('robot-task-progress').style.width = '0%';
+            document.querySelector('.progress-container').style.display = 'none';
+
+            const stepsContainer = document.getElementById('robot-task-steps');
+            stepsContainer.innerHTML = `<p style="color: #888;">请点击左侧任务查看详情</p>`;
+        }
+
+        function showRobotTask(robotId) {
+            console.log('robotId:', robotId);
+
+            if (!currentTaskId) {
+                return;
+            }
+
+            // 激活点击的机器人
+            document.querySelectorAll('.robot-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const targetRobotItem = document.querySelector(`.robot-item[data-robot="${robotId}"]`);
+            if (targetRobotItem) {
+                targetRobotItem.classList.add('active');
+            } else {
+                console.warn(`No .robot-item found with data-robot="${robotId}"`);
+            }
+
+            // 请求接口数据
+            fetch(`/robot/${currentTaskId}/${robotId}`, { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    const taskCard = document.getElementById('robot-task-card');
+                    taskCard.classList.add('show');
+
+                    // // 显示主任务名 (第一个subtask名)
+                    // if (data.length > 0) {
+                    //     document.getElementById('robot-task-name').textContent = data[0].subtask_name;
+                    // } else {
+                    //     document.getElementById('robot-task-name').textContent = '无任务';
+                    // }
+
+                    // 统计进度
+                    let totalSteps = 0;
+                    let completedSteps = 0;
+                    data.forEach(subtask => {
+                        totalSteps += subtask.step.length;
+                        completedSteps += subtask.step.filter(s => s.status === 'completed').length;
+                    });
+                    const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+                    const statusElement = document.getElementById('robot-task-status');
+                    if (progressPercent === 100) {
+                        statusElement.innerHTML = `状态: <span style="color: var(--success);">已完成 (100%)</span>`;
+                    } else if (progressPercent > 0) {
+                        statusElement.innerHTML = `状态: <span style="color: var(--warning);">执行中 (${progressPercent}%)</span>`;
+                    } else {
+                        statusElement.innerHTML = `状态: <span style="color: var(--danger);">未开始 (0%)</span>`;
+                    }
+
+                    document.getElementById('robot-task-progress').style.width = `${progressPercent}%`;
+
+                    // 渲染步骤分组
+                    const stepsContainer = document.getElementById('robot-task-steps');
+                    stepsContainer.innerHTML = '';
+
+                    const toolIconMap = {
+                        'navigate_to_where': 'map-marker-alt',
+                        'grasp_object': 'hand-rock',
+                        'place_to_where': 'recycle'
+                    };
+
+                    data.forEach(subtask => {
+                        // 每个子任务容器
+                        const subtaskDiv = document.createElement('div');
+                        subtaskDiv.className = 'subtask-group';
+
+                        // 子任务标题
+                        const subtaskTitle = document.createElement('h4');
+                        subtaskTitle.textContent = subtask.subtask_name;
+                        subtaskDiv.appendChild(subtaskTitle);
+
+                        // 步骤列表
+                        subtask.step.forEach(step => {
+                            const stepElement = document.createElement('div');
+                            stepElement.className = 'task-step';
+
+                            const iconName = toolIconMap[step.tool_name] || 'tools';
+
+                            let statusClass = '';
+                            let statusText = '';
+                            if (step.status === 'completed') {
+                                statusClass = 'status-completed';
+                                statusText = '已完成';
+                            } else if (step.status === 'failed') {
+                                statusClass = 'status-failed';
+                                statusText = '失败';
+                            } else {
+                                statusClass = 'status-pending';
+                                statusText = '待处理';
+                            }
+
+                            stepElement.innerHTML = `
+                        <div class="step-icon"><i class="fas fa-${iconName}"></i></div>
+                        <div class="step-content">${step.tool_name}(${step.arguestment})</div>
+                        <div class="step-status ${statusClass}">${statusText}</div>
+                    `;
+
+                            subtaskDiv.appendChild(stepElement);
+                        });
+
+                        stepsContainer.appendChild(subtaskDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching robot task:', error);
+                });
+        }
+
+        function testConnection() {
+            const url = document.getElementById('server-url').value;
+            const statusElement = document.getElementById('connection-status');
+
+            statusElement.textContent = "Connection Status: Testing...";
+            statusElement.style.color = "var(--warning)";
+            fetch(url, { method: 'GET' })
+                .then(response => {
+                    if (response.ok) {
+                        statusElement.textContent = "Connection Status: Connected";
+                        statusElement.style.color = "var(--success)";
+                    } else {
+                        statusElement.textContent = "Connection Status: Failed - Invalid URL";
+                        statusElement.style.color = "var(--danger)";
+                    }
+                })
+                .catch(error => {
+                    statusElement.textContent = "Connection Status: Failed - Network Error";
+                    statusElement.style.color = "var(--danger)";
+                });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter" || event.keyCode === 13) {
+                sendMessage();
+                event.preventDefault();
+            }
+        }
+
+        function sendMessage() {
+            clearIntervals();
+            // 每 10s 更新 get_mask
+            maskInterval = setInterval(() => {
+                document.querySelector('.reference-image').src = `http://172.16.20.133:5555/get_mask?ts=${Date.now()}`;
+            }, 10000);
+
+            // // // 每 30s 更新 get_image
+            // imageInterval = setInterval(() => {
+            //     document.querySelector('.live-video').src = `http://172.16.20.133:5555/get_image?ts=${Date.now()}`;
+            // }, 60000);
+
+            const message = document.getElementById('message').value;
+            const responseElement = document.getElementById('server-response');
+
+            if (!message) {
+                responseElement.innerHTML = `<span style="color: var(--danger);">❌ Error: Message cannot be empty</span>`;
+                return;
+            }
+
+            responseElement.innerHTML = `<span style="color: var(--text-primary);">⏳ Sending message to server...</span>`;
+
+            currentTaskId = generateUUID();
+
+            fetch(document.getElementById('server-url').value, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ task: message, task_id: currentTaskId })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'success') {
+                        const reasoning = result.data.reasoning_explanation || "No reasoning provided";
+                        const subtasks = result.data.subtask_list || [];
+
+                        let html = `
+                    <p style="color: var(--success);">✅ ${result.message}</p>
+                    <p><strong>📝 Reasoning:</strong><br>${reasoning}</p>
+                    <p><strong>📋 Subtasks:</strong></p>
+                    <ol>
+                `;
+
+                        const sortedSubtasks = subtasks.sort((a, b) => Number(a.subtask_order) - Number(b.subtask_order));
+                        sortedSubtasks.forEach((subtask, index) => {
+                            html += `<li><strong>${subtask.robot_name}</strong> — ${subtask.subtask}</li>`;
+                        });
+
+                        html += `</ol>`;
+
+                        responseElement.innerHTML = html;
+                    } else {
+                        responseElement.innerHTML = `<span style="color: var(--danger);">❌ ${result.message}</span>`;
+                    }
+                })
+                .catch(error => {
+                    responseElement.innerHTML = `<span style="color: var(--danger);">❌ Error: ${error.message}</span>`;
+                });
+        }
+
+        function clearMessage() {
+            document.getElementById('message').value = "";
+            clearIntervals();
+        }
+
+        function clearIntervals() {
+            if (maskInterval) {
+                clearInterval(maskInterval);
+                maskInterval = null;
+            }
+            if (imageInterval) {
+                clearInterval(imageInterval);
+                imageInterval = null;
+            }
+        }
+
+        function updateUI() {
+            const micIcon = document.getElementById('micIcon');
+            const voiceButtonText = document.getElementById('voiceButtonText');
+            const recordingIndicator = document.getElementById('recordingIndicator');
+            const voiceButton = document.getElementById('voiceButton');
+
+            if (isRecording) {
+                micIcon.innerHTML = '&#128249;'; // Change icon to stop (camera icon)
+                voiceButtonText.innerText = 'Stop Recording';
+                recordingIndicator.classList.remove('hidden');
+                voiceButton.classList.add('recording');
+            } else {
+                micIcon.innerHTML = '&#127908;'; // Reset to microphone icon
+                voiceButtonText.innerText = 'Start Recording';
+                recordingIndicator.classList.add('hidden');
+                voiceButton.classList.remove('recording');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('页面加载完成，获取机器人状态并显示第一个任务');
+            const robotData = await fetchRobotStatus();
+
+            if (robotData.length > 0) {
+                showRobotTask(robotData[0].robot_name);
+            } else {
+                console.warn('没有机器人数据，无法显示任务');
+            }
+
+            const socket = io();
+            socket.on("text_update", (data) => {
+                document.getElementById("message").value = data.data
+            })
+        });
+    </script>
+</body>
+
+</html>

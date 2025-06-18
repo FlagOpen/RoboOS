@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoboOS - Intelligent Robot Operating System</title>
+    <link rel="stylesheet" href="js/all.min.css" />
+    <style>
+        :root {
+            --primary: #4ed7e5;
+            --secondary: #4a99e3;
+            --accent: #937ae7;
+            --success: #4be1b0;
+            --warning: #ffc266;
+            --danger: #f26d7d;
+            --light: #f5faff;
+            --dark: #2a2f3a;
+            --bg-dark: #333945;
+            --bg-darker: #2b2f3a;
+            --text-primary: #f0f4fa;
+            --text-secondary: #b0c4d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        @font-face {
+            font-family: 'Rajdhani';
+            src: url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+        }
+
+        /* 视频背景容器 */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .video-background video {
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+        }
+
+        /* 视频覆盖层 - 增加可读性 */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 14, 23, 0.7);
+            z-index: 0;
+        }
+
+        /* 主容器 */
+        .main-container {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* 标题样式 */
+        .main-title {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .main-subtitle {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 800px;
+            line-height: 1.6;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        /* 按钮容器 */
+        .button-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        /* 主按钮样式 */
+        .main-button {
+            padding: 1.2rem 2.5rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .main-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+
+        .main-button:hover::before {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.6);
+        }
+
+        .main-button i {
+            font-size: 1.5rem;
+        }
+
+        /* 部署按钮 */
+        .deploy-button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--bg-dark);
+            border: none;
+        }
+
+        /* 任务按钮 */
+        .task-button {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--text-primary);
+            border: 2px solid var(--primary);
+        }
+
+        .task-button:hover {
+            background: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+
+        /* 底部信息 */
+        .footer-info {
+            position: absolute;
+            bottom: 2rem;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            animation: fadeIn 2s ease-out;
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+            
+            .main-subtitle {
+                font-size: 1.1rem;
+                padding: 0 20px;
+            }
+            
+            .button-container {
+                flex-direction: column;
+                gap: 1rem;
+                width: 80%;
+            }
+            
+            .main-button {
+                width: 100%;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="video-background">
+        <video autoplay muted loop playsinline>
+            <source src="https://baai-solution.ks3-cn-beijing.ksyuncs.com/ei2/video/banner3abc.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
+    <div class="main-container">
+        <h1 class="main-title">
+             <img src="/assets/images/logo.png" alt="RoboOS Logo"
+                style="height: 60px; vertical-align: middle; margin-right: 10px;"> RoboOS
+        </h1>
+        <p class="main-subtitle">
+            The new generation of intelligent robot operating system provides powerful task scheduling and distributed computing capabilities,
+            Make robot development simpler and more efficient
+        </p>
+        
+        <div class="button-container">
+            <button class="main-button deploy-button" onclick="navigateTo('deploy')">
+                <i class="fas fa-rocket"></i> Start deployment
+            </button>
+            <button class="main-button task-button" onclick="navigateTo('release')">
+                <i class="fas fa-tasks"></i> Publish Task
+            </button>
+        </div>
+        
+        <div class="footer-info">
+            RoboOS v2.0 | Intelligent Robot Control Platform | © 2025 RoboOS Team
+        </div>
+    </div>
+
+    <script>
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.querySelector('.video-background video');
+            
+            video.addEventListener('error', function() {
+                document.querySelector('.video-background').innerHTML = '';
+                document.querySelector('.video-background').style.background = 
+                    'radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.04) 0%, transparent 25%), ' +
+                    'radial-gradient(circle at 80% 70%, rgba(0, 136, 255, 0.04) 0%, transparent 25%), ' +
+                    'linear-gradient(to bottom, var(--bg-dark), var(--bg-darker))';
+            });
+        });
+    </script>
+</body>
+</html>
