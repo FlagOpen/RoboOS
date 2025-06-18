@@ -87,7 +87,6 @@ class MultiStepAgent:
         stream: bool = False,
         reset: bool = True,
         images: Optional[List[str]] = None,
-        additional_args: Optional[Dict] = None,
         max_steps: Optional[int] = None,
     ):
         """
@@ -98,7 +97,6 @@ class MultiStepAgent:
             stream (`bool`): Whether to run in a streaming way.
             reset (`bool`): Whether to reset the conversation or keep it going from previous run.
             images (`list[str]`, *optional*): Paths to image(s).
-            additional_args (`dict`, *optional*): Any other variables that you want to pass to the agent run, for instance images or dataframes. Give them clear names!
             max_steps (`int`, *optional*): Maximum number of steps the agent can take to solve the task. if not provided, will use the agent's default value.
 
         Example:
@@ -110,11 +108,6 @@ class MultiStepAgent:
         """
         max_steps = max_steps or  self.max_steps
         self.task = task
-        if additional_args:
-            self.state.update(additional_args)
-            self.task += f"""
-You have been provided with these additional arguments, that you can access using the keys as variables in your python code:
-{str(additional_args)}."""
 
         if reset:
             self.memory.reset()
