@@ -36,19 +36,7 @@ class RobotManager:
         self.model = self._gat_model_info_from_config()
         self.tools = None
         self.tools_path = None
-        self._prewarm_model()
-
-
-    def _prewarm_model(self):
-        """Pre-warm the model to avoid atexit-related issues"""
-        try:
-            self.model(
-                messages=[{"role": "user", "content": "Hello"}],
-                stop_sequences=["Observation:"],
-                max_tokens=1  # Keep cost low
-            )
-        except Exception as e:
-            pass            
+       
 
     def _gat_model_info_from_config(self):
         """Initial model"""

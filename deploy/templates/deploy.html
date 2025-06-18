@@ -71,7 +71,7 @@
 
         .title-bar {
             width: 100%;
-            height: 80px;
+            height: 150px;
             background: rgba(10, 14, 23, 0.8);
             color: var(--text-primary);
             display: flex;
@@ -99,7 +99,7 @@
         .logo {
             display: flex;
             align-items: center;
-            font-size: 1.5rem;
+            font-size: 3rem;
             font-weight: bold;
             color: var(--primary);
             text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
@@ -162,7 +162,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(0, 240, 255, 0.1);
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 40px;
         }
 
         .config-card h3 {
@@ -199,6 +199,8 @@
             border-radius: 6px;
             color: var(--text-primary);
             font-family: 'Rajdhani', sans-serif;
+            font-size: 30px; 
+            font-weight: bold;  
             transition: all 0.3s ease;
         }
 
@@ -259,7 +261,7 @@
             border-radius: 6px;
             padding: 15px;
             font-family: monospace;
-            font-size: 0.9rem;
+            font-size: 2rem;
             color: var(--success);
             overflow-y: auto;
             white-space: pre-wrap;
@@ -708,7 +710,7 @@
     <div class="title-bar">
         <div class="logo">
             <img src="/assets/images/logo.png" alt="RoboOS Logo"
-                style="height: 60px; vertical-align: middle; margin-right: 10px;">
+                style="height: 80px; vertical-align: middle; margin-right: 10px;">
             <span>RoboOS</span>
             <span class="subtitle">One click deployment console</span>
         </div>
@@ -745,23 +747,31 @@
                     <div class="step-label">complete</div>
                 </div>
             </div>
-
-            <div class="config-card">
-                <h3><i class="fas fa-server"></i> Inference service configuration</h3>
-                <div class="form-group">
-                    <label for="model-path">Model Path</label>
-                    <input type="text" id="model-path" class="form-control" placeholder="/home/gw/qwen/Qwen2.5-VL-7B-Instruct" value="/home/gw/qwen/Qwen2.5-VL-7B-Instruct">
-                    <p class="form-help">The model name should be consistent with the configuration file for automatic matching</p>
+            <div class="collapse-panel">
+                <div class="collapse-header">
+                    <h4><i class="fas fa-code-branch"></i> Basic Settings</h4>
+                    <i class="fas fa-chevron-up"></i>
                 </div>
-                <div class="form-group">
-                    <label for="inference-port">Service port</label>
-                    <input type="number" id="inference-port" class="form-control" placeholder="7000" value="7000">
+                <div class="config-card">
+                    <h3><i class="fas fa-server"></i> Conda Environment Selection</h3>
+                    <div class="form-group">
+                        <label for="conda-env">Startup Command</label>
+                        <input type="text" id="conda-env" class="form-control" placeholder="e.g. flagscal" value="flagscal">
+                    </div>
+                </div>
+                <div class="config-card">
+                    <h3><i class="fas fa-server"></i> Inference service configuration</h3>
+                    <div class="form-group">
+                        <label for="startup-command">Startup Command</label>
+                        <input type="text" id="startup-command" class="form-control" placeholder="e.g. vllm serve /path/to/checkpoint" value="vllm serve /workspace/Robobrain_v2.0 --gpu-memory-utilization=0.9 --max-model-len=32768 --max-num-seqs=256 --port=4567 --trust-remote-code --enable-chunked-prefill --enable-auto-tool-choice --tool-call-parser hermes">
+                        <p class="form-help">The startup command should match your environment and model configuration</p>
+                    </div>
                 </div>
             </div>
 
             <div class="collapse-panel active">
                 <div class="collapse-header">
-                    <h4><i class="fas fa-code-branch"></i> Advanced</h4>
+                    <h4><i class="fas fa-code-branch"></i> Advanced Settings</h4>
                     <i class="fas fa-chevron-up"></i>
                 </div>
                 <div class="collapse-content">
@@ -1293,8 +1303,8 @@ Waiting for deployment to begin...
                 
   
                 const deploymentConfig = {
-                    model_path: document.getElementById('model-path').value,
-                    inference_port: document.getElementById('inference-port').value,
+                    startup_command: document.getElementById('startup-command').value,
+                    conda_env: document.getElementById('conda-env').value,
                     master_config: document.getElementById('master-config').value,
                     slaver_config: document.getElementById('slaver-config').value
                 };
@@ -1327,7 +1337,7 @@ Waiting for deployment to begin...
                 
                 appendLog('\n=== Deployment successful ===');
                 appendLog(`Master: http://${window.location.hostname}:5000`);
-                appendLog(`Inference service: http://${window.location.hostname}:${deploymentConfig.inference_port}`);
+                // appendLog(`Inference service: http://${window.location.hostname}:${deploymentConfig.conda_env}`);
                 document.getElementById(`step5`).classList.remove('active');
                 document.getElementById(`step5`).classList.add('completed');
                 

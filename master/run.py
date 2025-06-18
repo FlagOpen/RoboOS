@@ -1,13 +1,15 @@
 import psutil
 import traceback
 
+from flask_cors import CORS
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_socketio import SocketIO
 from agents.agent import GlobalAgent
 
 
 app = Flask(__name__, static_folder="assets")
-socketio = SocketIO(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  
+socketio = SocketIO(app, cors_allowed_origins="*") 
 
 
 master_agent = GlobalAgent(config_path="config.yaml")

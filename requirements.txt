@@ -34,6 +34,7 @@ orjson==3.10.16
 packaging==25.0
 pandas==2.2.3
 pillow==11.2.1
+psutil==7.0.0
 pydantic==2.11.3
 pydantic_core==2.33.1
 pydub==0.25.1
@@ -45,6 +46,8 @@ PyYAML==6.0.2
 redis==5.2.1
 requests==2.32.3
 rich==14.0.0
+ruamel.yaml==0.18.14
+ruamel.yaml.clib==0.2.12
 ruff==0.11.6
 safehttpx==0.1.6
 semantic-version==2.10.0

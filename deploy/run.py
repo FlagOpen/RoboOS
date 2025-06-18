@@ -111,7 +111,7 @@ def saveconfig():
 @app.route('/api/validate-config', methods=['POST'])
 def validate_config():
     data = request.json
-    required_fields = ['model_path', 'inference_port', 'master_config', 'slaver_config']
+    required_fields = ['conda_env', 'startup_command', 'master_config', 'slaver_config']
     
     for field in required_fields:
         if not data.get(field):
@@ -120,7 +120,7 @@ def validate_config():
                 "message": f"Missing necessary fields: {field}"
             }), 400
 
-    for file_path in  [data['model_path'], data['master_config'], data['slaver_config']]:
+    for file_path in  [data['master_config'], data['slaver_config']]:
         if not os.path.exists(file_path):
             return jsonify({
                 "success": False,
@@ -128,12 +128,11 @@ def validate_config():
             }), 400
     
     # Check if the port is occupied
-    for port in [data['inference_port'], 5000]:
-        if is_port_in_use(int(port)):
-            return jsonify({
-                "success": False,
-                "message": f"The port is already occupied: {port}"
-            }), 400
+    if is_port_in_use(5000):
+        return jsonify({
+            "success": False,
+            "message": f"The port is already occupied: 5000"
+        }), 400
     
     # master
     master_config = data["master_config"]
@@ -144,7 +143,7 @@ def validate_config():
     if not communicator:
         return jsonify({
                 "success": False,
-                "message": f"Lack of communicator configuration: {port}"
+                "message": f"Lack of communicator configuration"
             }), 400
     try:
         r = redis.StrictRedis(
@@ -173,30 +172,33 @@ def validate_config():
 def start_inference():
     data = request.json
     
-    model_path = data["master_config"]
-    port = data["inference_port"]
-    try:
-        command = [
-            "nohup", "vllm", "serve", model_path,
-            "--trust-remote-code",
-            "--served-model-name", "robobrain",
-            "--gpu-memory-utilization", "0.92",
-            "--tensor-parallel-size", "1",
-            "--port", str(port),
-            "--max-model-len", "10000",
-            "--enable-auto-tool-choice",
-            "--tool-call-parser", "hermes"
-        ]
+    conda_env = data.get("conda_env")
+    startup_command = data.get("startup_command")
 
-        # log
-        log_file = f"vllm_{port}.log"
+    if not conda_env or not startup_command:
+        return jsonify({
+            "success": False,
+            "message": "Missing required fields: 'conda_env' and/or 'startup_command'"
+        }), 400
+
+    try:
+        log_file = "vllm.log"
+
+        bash_command = f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && {startup_command}"
+
         with open(log_file, "w") as f:
-            subprocess.Popen(command, stdout=f, stderr=f, preexec_fn=os.setpgrp)
-        
+            subprocess.Popen(
+                ["bash", "-c", bash_command],
+                stdout=f,
+                stderr=f,
+                preexec_fn=os.setpgrp 
+            )
+
         return jsonify({
             "success": True,
-            "message": f"Model robobrain has been started, listening on port {port}, log file:{log_file}",
+            "message": f"Model has been started in conda env '{conda_env}'. Log file: {log_file}"
         })
+
     except Exception as e:
         return jsonify({
             "success": False,
@@ -205,10 +207,15 @@ def start_inference():
 
 @app.route('/api/start-master', methods=['POST'])
 def start_master():
+    data = request.json
+    
+    conda_env = data.get("conda_env")
     try:
+        bash_command = f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && python run.py"
+
         with open("master.log", "w") as log:
             subprocess.Popen(
-                ["nohup", "python", 'run.py'],
+                ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
                 cwd="/home/gw/code/RoboOS/master",
@@ -226,10 +233,15 @@ def start_master():
 
 @app.route('/api/start-slaver', methods=['POST'])
 def start_slaver():
+    data = request.json
+    
+    conda_env = data.get("conda_env")
     try:
+        bash_command = f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && python run.py"
+
         with open("slaver.log", "w") as log:
             subprocess.Popen(
-                ["nohup", "python", 'run.py'],
+                ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
                 cwd="/home/gw/code/RoboOS/slaver",
@@ -246,4 +258,4 @@ def start_slaver():
         }), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8888, debug=True)
+    app.run(host="0.0.0.0", port=8888, debug=False, use_reloader=False)

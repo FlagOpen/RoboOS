@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RoboOS - 任务控制台</title>
+    <title>RoboOS - mission control</title>
     <link rel="stylesheet" href="js/all.min.css" />
     <script src="js/socket.io.min.js"></script>
     <style>
@@ -68,10 +68,9 @@
             z-index: -1;
         }
 
-        /* 标题栏样式 */
         .title-bar {
             width: 100%;
-            height: 100px;
+            height: 150px;
             background: rgba(10, 14, 23, 0.8);
             color: var(--text-primary);
             display: flex;
@@ -146,14 +145,12 @@
             box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
         }
 
-        /* 主内容区域 */
         .main-content {
             flex: 1;
             display: flex;
             height: calc(100% - 60px);
         }
 
-        /* 左侧任务区域 (50%) */
         .task-area {
             width: 50%;
             height: 100%;
@@ -163,7 +160,6 @@
             border-right: 1px solid rgba(0, 240, 255, 0.1);
         }
 
-        /* API客户端样式 */
         .api-client-container {
             height: 100%;
             display: flex;
@@ -273,7 +269,6 @@
             font-size: 0.9rem;
         }
 
-        /* 右侧状态区域 (50%) */
         .status-area {
             width: 50%;
             height: 100%;
@@ -287,7 +282,6 @@
             gap: 1.5rem;
         }
 
-        /* 机器人状态卡片 */
         .status-card {
             background: rgba(15, 20, 35, 0.6);
             border-radius: 8px;
@@ -368,7 +362,6 @@
             color: var(--danger);
         }
 
-        /* 机器人任务详情卡片 (替换原来的任务队列位置) */
         .robot-task-card {
             background: rgba(15, 20, 35, 0.6);
             border-radius: 8px;
@@ -470,7 +463,6 @@
             background: rgba(255, 45, 84, 0.1);
         }
 
-        /* 动画 */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -507,7 +499,6 @@
             }
         }
 
-        /* 数据流效果 */
         .data-stream {
             position: absolute;
             top: 0;
@@ -534,7 +525,6 @@
             }
         }
 
-        /* 响应式设计 */
         @media (max-width: 768px) {
             .main-content {
                 flex-direction: column;
@@ -565,7 +555,6 @@
             background-color: #0056b3;
         }
 
-        /* Voice button (青蓝色搭配) */
         .api-button.voice-btn {
             background-color: #17a2b8;
             color: white;
@@ -580,7 +569,6 @@
 
         .api-button.voice-btn.recording {
             background-color: #117a8b;
-            /* 录音时再深一点 */
         }
 
         .mic-icon {
@@ -643,7 +631,6 @@
         .task-media-preview {
             margin-top: 20px;
             background: #1e1e2f;
-            /* 深色背景 */
             border: 1px solid #333;
             border-radius: 8px;
             padding: 12px;
@@ -687,19 +674,17 @@
     <div class="title-bar">
         <div class="logo">
             <img src="/assets/images/logo.png" alt="RoboOS Logo"
-                style="height: 60px; vertical-align: middle; margin-right: 10px;">
+                style="height: 80px; vertical-align: middle; margin-right: 10px;">
             RoboOS
-            <span class="subtitle">任务控制台 v2.0</span>
+            <span class="subtitle">mission control v2.0</span>
         </div>
         <div class="user-info">
-            <span class="username">管理员</span>
-            <img src="/assets/images/image.png" alt="海绵宝宝头像">
+            <span class="username">admin</span>
+            <img src="/assets/images/image.png" alt="SpongeBob">
         </div>
     </div>
 
-    <!-- 主内容区域 -->
     <div class="main-content">
-        <!-- 左侧API控制台 (50%) -->
         <div class="task-area">
             <div class="api-client-container">
                 <!-- Server URL & Connection -->
@@ -733,21 +718,18 @@
             </div>
         </div>
 
-        <!-- 右侧机器人状态区域 (50%) -->
         <div class="status-area">
-            <!-- 机器人状态卡片 -->
             <div class="status-card">
-                <h3><i class="fas fa-robot"></i> 机器人状态</h3>
+                <h3><i class="fas fa-robot"></i> Robot status</h3>
                 <div id="robot-list">
                 </div>
             </div>
-            <!-- 系统状态卡片 -->
             <div class="status-card system-status">
-                <h3><i class="fas fa-chart-line"></i> 系统状态</h3>
+                <h3><i class="fas fa-chart-line"></i> system state</h3>
 
                 <div style="margin-bottom: 1rem;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                        <span>CPU负载</span>
+                        <span>CPU</span>
                         <span id="cpu-load-text">--%</span>
                     </div>
                     <div class="progress-container">
@@ -757,7 +739,7 @@
 
                 <div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                        <span>内存使用</span>
+                        <span>Memory</span>
                         <span id="memory-usage-text">--%</span>
                     </div>
                     <div class="progress-container">
@@ -767,10 +749,9 @@
                 </div>
             </div>
 
-            <!-- 任务卡片 -->
             <div class="robot-task-card" id="robot-task-card">
                 <div class="task-progress">
-                    <h3><i class="fas fa-tasks"></i> 当前任务</h3>
+                    <h3><i class="fas fa-tasks"></i> Current task</h3>
                     <div id="robot-task-status"></div>
                     <div class="progress-container" style="display: none;">
                         <div class="progress-bar" id="robot-task-progress" style="width: 0%"></div>
@@ -778,14 +759,11 @@
                 </div>
 
                 <div class="task-steps" id="robot-task-steps">
-                    <p style="color: #888;">请点击左侧任务查看详情</p>
+                    <p style="color: #888;">Please click on the task on the left to view details</p>
                 </div>
                 <div class="task-media-preview">
-                    <h4><i class="fas fa-photo-video"></i> 任务媒体预览</h4>
+                    <h4><i class="fas fa-photo-video"></i> Task Media Preview Task Media Preview</h4>
                     <div class="media-container-horizontal" id="mediaContainer">
-                        <!-- <img src="http://172.16.20.133:5555/get_image" alt="实时视频流" class="live-video"> -->
-                        <img src="http://172.16.20.133:5555/video_feed" alt="实时视频流" class="live-video">
-                        <!-- <img src="http://172.16.20.133:5555/get_mask" alt="参考图片" class="reference-image"> -->
                     </div>
                 </div>
             </div>
@@ -808,7 +786,7 @@
         function fetchSystemStatus() {
             const protocol = window.location.protocol;
             const hostname = window.location.hostname;
-            const port = window.location.port;
+            const port = 5000;
             const apiURL = `${protocol}//${hostname}:${port}/system_status`;
 
             fetch(apiURL)
@@ -839,7 +817,7 @@
             const input = document.getElementById('server-url');
             const protocol = window.location.protocol;
             const hostname = window.location.hostname;
-            const port = window.location.port;
+            const port = 5000;
             const baseURL = `${protocol}//${hostname}:${port}/publish_task`;
             input.value = baseURL;
         });
@@ -847,7 +825,7 @@
         function fetchRobotStatus() {
             const protocol = window.location.protocol;
             const hostname = window.location.hostname;
-            const port = window.location.port;
+            const port = 5000;
             const apiURL = `${protocol}//${hostname}:${port}/robot_status`;
 
             return fetch(apiURL)
@@ -860,11 +838,9 @@
                 .then(robotData => {
                     const container = document.getElementById('robot-list');
 
-                    // 先记住当前激活的机器人名
                     const currentActiveItem = document.querySelector('.robot-item.active');
                     const activeRobotName = currentActiveItem ? currentActiveItem.getAttribute('data-robot') : null;
 
-                    // 清空
                     container.innerHTML = '';
 
                     robotData.forEach(robot => {
@@ -876,7 +852,6 @@
                         item.setAttribute('data-robot', robot.robot_name);
                         item.setAttribute('onclick', `showRobotTask('${robot.robot_name}')`);
 
-                        // 如果机器人名等于之前激活的机器人 → 恢复active
                         if (robot.robot_name === activeRobotName) {
                             item.classList.add('active');
                         }
@@ -903,13 +878,13 @@
 
         function getStatusText(status) {
             if (status === 'busy') {
-                return `执行中`;
+                return `busy`;
             } else if (status === 'idle') {
-                return '待命';
+                return 'idle';
             } else if (status === 'offline') {
-                return '离线';
+                return 'offline';
             } else {
-                return '未知';
+                return 'unknown';
             }
         }
 
@@ -928,13 +903,13 @@
         setInterval(fetchRobotStatus, 10000);
 
         function clearTaskCard() {
-            document.getElementById('robot-task-name').innerText = '暂无任务';
+            document.getElementById('robot-task-name').innerText = 'No tasks';
             document.getElementById('robot-task-status').innerText = '';
             document.getElementById('robot-task-progress').style.width = '0%';
             document.querySelector('.progress-container').style.display = 'none';
 
             const stepsContainer = document.getElementById('robot-task-steps');
-            stepsContainer.innerHTML = `<p style="color: #888;">请点击左侧任务查看详情</p>`;
+            stepsContainer.innerHTML = `<p style="color: #888;">Please click on the task on the left to view details</p>`;
         }
 
         function showRobotTask(robotId) {
@@ -944,7 +919,6 @@
                 return;
             }
 
-            // 激活点击的机器人
             document.querySelectorAll('.robot-item').forEach(item => {
                 item.classList.remove('active');
             });
@@ -954,22 +928,12 @@
             } else {
                 console.warn(`No .robot-item found with data-robot="${robotId}"`);
             }
-
-            // 请求接口数据
             fetch(`/robot/${currentTaskId}/${robotId}`, { method: 'GET' })
                 .then(response => response.json())
                 .then(data => {
                     const taskCard = document.getElementById('robot-task-card');
                     taskCard.classList.add('show');
 
-                    // // 显示主任务名 (第一个subtask名)
-                    // if (data.length > 0) {
-                    //     document.getElementById('robot-task-name').textContent = data[0].subtask_name;
-                    // } else {
-                    //     document.getElementById('robot-task-name').textContent = '无任务';
-                    // }
-
-                    // 统计进度
                     let totalSteps = 0;
                     let completedSteps = 0;
                     data.forEach(subtask => {
@@ -989,7 +953,6 @@
 
                     document.getElementById('robot-task-progress').style.width = `${progressPercent}%`;
 
-                    // 渲染步骤分组
                     const stepsContainer = document.getElementById('robot-task-steps');
                     stepsContainer.innerHTML = '';
 
@@ -1000,16 +963,14 @@
                     };
 
                     data.forEach(subtask => {
-                        // 每个子任务容器
+
                         const subtaskDiv = document.createElement('div');
                         subtaskDiv.className = 'subtask-group';
 
-                        // 子任务标题
                         const subtaskTitle = document.createElement('h4');
                         subtaskTitle.textContent = subtask.subtask_name;
                         subtaskDiv.appendChild(subtaskTitle);
 
-                        // 步骤列表
                         subtask.step.forEach(step => {
                             const stepElement = document.createElement('div');
                             stepElement.className = 'task-step';
@@ -1077,16 +1038,6 @@
 
         function sendMessage() {
             clearIntervals();
-            // 每 10s 更新 get_mask
-            maskInterval = setInterval(() => {
-                document.querySelector('.reference-image').src = `http://172.16.20.133:5555/get_mask?ts=${Date.now()}`;
-            }, 10000);
-
-            // // // 每 30s 更新 get_image
-            // imageInterval = setInterval(() => {
-            //     document.querySelector('.live-video').src = `http://172.16.20.133:5555/get_image?ts=${Date.now()}`;
-            // }, 60000);
-
             const message = document.getElementById('message').value;
             const responseElement = document.getElementById('server-response');
 
@@ -1181,7 +1132,7 @@
                 console.warn('没有机器人数据，无法显示任务');
             }
 
-            const socket = io();
+            const socket = io('http://localhost:5000');
             socket.on("text_update", (data) => {
                 document.getElementById("message").value = data.data
             })
