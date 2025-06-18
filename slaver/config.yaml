@@ -1,11 +1,7 @@
-# Tool Parameters
+
 tool:
-  # Disable arm tool
-  DISABLE_ARM: true
-  # Disable camera tool
-  DISABLE_CAMERA: true
-  # Disable chassis tool
-  DISABLE_CHASSIS: true
+  # Has the model undergone targeted training on tool_calls
+  SUPPORT_TOOL_CALLS: false
   # Probability of error in tool execution
   ERROR_PROBABILITY: 0
 
@@ -36,7 +32,7 @@ communicator:
   # database number
   DB: 0
   # Whether clear the database on startup
-  CLEAR: true
+  CLEAR: false
   # Password for server
   PASSWORD: ""
 
