@@ -335,13 +335,11 @@ class ToolCall:
 def convert_chat_message(original_message):
     content = original_message.content
     
-    core_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
-    core_content = re.sub(r'<answer>(.*?)</answer>', r'\1', core_content, flags=re.DOTALL).strip()
-    
-    if core_content.startswith('```json') and core_content.endswith('```'):
-        json_str = core_content[7:-3].strip()
-        try:
-            parsed_data = json.loads(json_str)
+    json_match = re.search(r'```json\n(.*?)\n```', content, flags=re.DOTALL)
+    if json_match:
+        json_str = json_match.group(1).strip()
+        parsed_data = json.loads(json_str)
+        if isinstance(parsed_data, dict) and 'name' in parsed_data:
             return ChatMessage(
                 role='assistant',
                 content=None,
@@ -350,22 +348,19 @@ def convert_chat_message(original_message):
                     type='function',
                     function=FunctionCall(
                         name=parsed_data['name'],
-                        arguments=json.dumps(parsed_data['arguments']),
+                        arguments=json.dumps(parsed_data.get('arguments', {})),
                         description=None
                     )
                 )],
                 raw=None
             )
-        except json.JSONDecodeError:
-            pass
     
     return ChatMessage(
         role='assistant',
-        content=core_content,
+        content=content,
         tool_calls=[],
         raw=None
     )
-
 
 class OpenAIServerModel(Model):
     """This model connects to an OpenAI-compatible API server.
