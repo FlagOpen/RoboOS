@@ -257,6 +257,56 @@ def start_slaver():
             "success": False,
             "message": f"Failed to start slaver service: {str(e)}"
         }), 500
+        
+
+@app.route('/api/get_tool_config')
+def get_tool_config():
+    try:
+        return jsonify({
+            "navigate": {
+                "method": "api",  
+                "command": "/api/navigate?target={x}"
+            },
+            "grasp": {
+                "method": "script",
+                "command": "python /scripts/grasp.py --object {object}"
+            },
+            "place": {
+                "method": "api",
+                "command": "/api/place?location={location}"
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "navigate": {
+                "method": "api",
+                "command": ""
+            },
+            "grasp": {
+                "method": "api",
+                "command": ""
+            },
+            "place": {
+                "method": "api",
+                "command": ""
+            }
+        }), 200
+
+@app.route('/api/save_tool_config', methods=['POST'])
+def save_tool_config():
+    try:
+        config = request.json
+        required_sections = ['navigate', 'grasp', 'place']
+        for section in required_sections:
+            if section not in config:
+                return jsonify({"error": f"Missing section: {section}"}), 400
+
+        with open('/workspace/RoboOS/slaver/robot_tools/robot_profile.yaml', 'w') as f:
+            json.dump(config, f, indent=4)
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8888, debug=False, use_reloader=False)

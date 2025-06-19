@@ -704,6 +704,153 @@
             color: var(--text-secondary);
             margin-top: 5px;
         }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .config-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: #2a2f3a;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #4ed7e5;
+            width: 60%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,240,255,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0,240,255,0.2);
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .tool-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border: none;
+            border-radius: 4px;
+            color: #b0c4d4;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(0,240,255,0.1);
+        }
+
+        .tab-btn.active {
+            background: rgba(0,240,255,0.2);
+            color: #4ed7e5;
+            font-weight: bold;
+        }
+
+        .tool-tab-content {
+            display: none;
+            padding: 10px 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0c4d4;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,240,255,0.2);
+            border-radius: 4px;
+            color: #fff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4ed7e5;
+            box-shadow: 0 0 0 2px rgba(0,240,255,0.2);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 15px;
+            margin-top: 15px;
+            border-top: 1px solid rgba(0,240,255,0.2);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-primary {
+            background: #4ed7e5;
+            color: #2a2f3a;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            background: #3ac5d3;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -793,11 +940,84 @@
                             <label for="slaver-config">Profile Path</label>
                             <input type="text" id="slaver-config" class="form-control" placeholder="/workspace/RoboOS/slaver/config.yaml" value="/workspace/RoboOS/slaver/config.yaml">
                             <p class="form-help">The image has built-in full configuration</p>
-                            <button class="btn btn-sm view-config-btn" onclick="viewConfig('slaver')">
-                                <i class="fas fa-file-code"></i> View/Edit Configuration Files
-                            </button>
+                            <div class="button-group">
+                                <button class="btn btn-sm view-config-btn" onclick="viewConfig('slaver')">
+                                    <i class="fas fa-file-code"></i> View/Edit Config
+                                </button>
+                                <button class="btn btn-sm view-config-btn" onclick="showToolConfig()">
+                                    <i class="fas fa-file-code"></i> Robot Tools Config
+                                </button>
+                            </div>
                         </div>
                     </div>
+                    <div id="tool-config-modal" class="config-modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3><i class="fas fa-robot"></i> Robot Tools Configuration</h3>
+                                <span class="close-btn" onclick="closeToolConfig()">&times;</span>
+                            </div>
+                            <div class="modal-body">
+                                <div class="tool-tabs">
+                                    <button class="tab-btn active" data-tab="navigate-tool">Navigate</button>
+                                    <button class="tab-btn" data-tab="grasp-tool">Grasp</button>
+                                    <button class="tab-btn" data-tab="place-tool">Place</button>
+                                </div>
+                                
+                                <div id="navigate-tool" class="tool-tab-content" style="display: block;">
+                                    <div class="form-group">
+                                        <label>Execution Method</label>
+                                        <select class="form-control execution-method" data-tool="navigate">
+                                            <option value="api">API</option>
+                                            <option value="script">Local Script</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Command</label>
+                                        <input type="text" class="form-control command-input" 
+                                            data-tool="navigate" 
+                                            placeholder="e.g. /api/navigate or ./scripts/navigate.sh">
+                                    </div>
+                                </div>
+                                
+                                <div id="grasp-tool" class="tool-tab-content">
+                                    <div class="form-group">
+                                        <label>Execution Method</label>
+                                        <select class="form-control execution-method" data-tool="grasp">
+                                            <option value="api">API</option>
+                                            <option value="script">Local Script</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Command</label>
+                                        <input type="text" class="form-control command-input" 
+                                            data-tool="grasp"
+                                            placeholder="e.g. /api/grasp or ./scripts/grasp.py">
+                                    </div>
+                                </div>
+                                
+                                <div id="place-tool" class="tool-tab-content">
+                                    <div class="form-group">
+                                        <label>Execution Method</label>
+                                        <select class="form-control execution-method" data-tool="place">
+                                            <option value="api">API</option>
+                                            <option value="script">Local Script</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Command</label>
+                                        <input type="text" class="form-control command-input" 
+                                            data-tool="place"
+                                            placeholder="e.g. /api/place or ./scripts/place.py">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" onclick="closeToolConfig()">Cancel</button>
+                                <button class="btn btn-primary" onclick="saveToolConfig()">Save Configuration</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -879,6 +1099,107 @@ Waiting for deployment to begin...
         let currentSearchTerm = '';
         let currentSearchIndex = 0;
         let searchResults = [];
+
+        let toolConfigs = {
+            navigate: { method: 'api', command: '' },
+            grasp: { method: 'api', command: '' },
+            place: { method: 'api', command: '' }
+        };
+
+        let toolConfigInitialized = false; 
+
+        function showToolConfig() {
+            document.getElementById('tool-config-modal').style.display = 'block';
+
+            if (!toolConfigInitialized) {
+                document.querySelector('.tool-tabs').addEventListener('click', function(e) {
+                    if (e.target.classList.contains('tab-btn')) {
+                        openToolTab(e.target);
+                    }
+                });
+
+                document.querySelectorAll('.execution-method, .command-input').forEach(input => {
+                    input.addEventListener('change', updateToolConfig);
+                });
+
+                toolConfigInitialized = true;
+            }
+
+            loadToolConfig();
+        }
+
+        function openToolTab(clickedBtn) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            clickedBtn.classList.add('active');
+
+            const tabId = clickedBtn.getAttribute('data-tab');
+            document.querySelectorAll('.tool-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(tabId).style.display = 'block';
+        }
+        function updateToolConfig() {
+            const tool = this.getAttribute('data-tool');
+            if (this.classList.contains('execution-method')) {
+                toolConfigs[tool].method = this.value;
+            } else {
+                toolConfigs[tool].command = this.value.trim();
+            }
+        }
+        function loadToolConfig() {
+            fetch('/api/get_tool_config')
+                .then(response => response.json())
+                .then(data => {
+                    Object.keys(toolConfigs).forEach(tool => {
+                        if (data[tool]) {
+                            toolConfigs[tool] = data[tool];  
+                            document.querySelector(`.execution-method[data-tool="${tool}"]`).value = data[tool].method;
+                            document.querySelector(`.command-input[data-tool="${tool}"]`).value = data[tool].command;
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Failed to load configuration:', error);
+                });
+        }
+
+        function saveToolConfig() {
+            const errors = [];
+            Object.keys(toolConfigs).forEach(tool => {
+                if (!toolConfigs[tool].command) {
+                    errors.push(`${tool} command cannot be empty`);
+                }
+            });
+
+            if (errors.length > 0) {
+                alert('Configuration Error:\n' + errors.join('\n'));
+                return;
+            }
+
+            fetch('/api/save_tool_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(toolConfigs)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Configuration saved successfully!');
+                    closeToolConfig();
+                } else {
+                    throw new Error('Save failed');
+                }
+            })
+            .catch(error => {
+                alert('Save failed: ' + error.message);
+            });
+        }
+
+        function closeToolConfig() {
+            document.getElementById('tool-config-modal').style.display = 'none';
+        }
+
 
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -1365,8 +1686,6 @@ Waiting for deployment to begin...
                 }, 2000);
             }
         }
-
-
 
         async function callDeploymentStep(endpoint, config) {
             try {
