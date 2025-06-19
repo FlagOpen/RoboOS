@@ -128,12 +128,13 @@ def validate_config():
             }), 400
     
     # Check if the port is occupied
-    if is_port_in_use(5000):
-        return jsonify({
-            "success": False,
-            "message": f"The port is already occupied: 5000"
-        }), 400
-    
+    for port in [4567, 5000]:
+        if is_port_in_use(port):
+            return jsonify({
+                "success": False,
+                "message": f"The port is already occupied: {port}"
+            }), 400
+        
     # master
     master_config = data["master_config"]
     with open(master_config, 'r', encoding='utf-8') as f:
@@ -218,7 +219,7 @@ def start_master():
                 ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
-                cwd="/home/gw/code/RoboOS/master",
+                cwd="/workspace/RoboOS/master",
                 preexec_fn=os.setpgrp
             )
         return jsonify({
@@ -244,7 +245,7 @@ def start_slaver():
                 ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
-                cwd="/home/gw/code/RoboOS/slaver",
+                cwd="/workspace/RoboOS/slaver",
                 preexec_fn=os.setpgrp
             )
         return jsonify({

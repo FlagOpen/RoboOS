@@ -756,14 +756,14 @@
                     <h3><i class="fas fa-server"></i> Conda Environment Selection</h3>
                     <div class="form-group">
                         <label for="conda-env">Startup Command</label>
-                        <input type="text" id="conda-env" class="form-control" placeholder="e.g. flagscal" value="flagscal">
+                        <input type="text" id="conda-env" class="form-control" placeholder="e.g. flagscale-agent" value="flagscale-agent">
                     </div>
                 </div>
                 <div class="config-card">
                     <h3><i class="fas fa-server"></i> Inference service configuration</h3>
                     <div class="form-group">
                         <label for="startup-command">Startup Command</label>
-                        <input type="text" id="startup-command" class="form-control" placeholder="e.g. vllm serve /path/to/checkpoint" value="vllm serve /workspace/Robobrain_v2.0 --gpu-memory-utilization=0.9 --max-model-len=32768 --max-num-seqs=256 --port=4567 --trust-remote-code --enable-chunked-prefill --enable-auto-tool-choice --tool-call-parser hermes">
+                        <input type="text" id="startup-command" class="form-control" placeholder="e.g. flagscale serve robobrain" value="flagscale serve robobrain">
                         <p class="form-help">The startup command should match your environment and model configuration</p>
                     </div>
                 </div>
@@ -779,7 +779,7 @@
                         <h3><i class="fas fa-crown"></i> Master node configuration</h3>
                         <div class="form-group">
                             <label for="master-config">Profile Path</label>
-                            <input type="text" id="master-config" class="form-control" placeholder="/home/gw/code/RoboOS/master/config.yaml" value="/home/gw/code/RoboOS/master/config.yaml">
+                            <input type="text" id="master-config" class="form-control" placeholder="/workspace/RoboOS/master/config.yaml" value="/workspace/RoboOS/master/config.yaml">
                             <p class="form-help">The image has built-in full configuration</p>
                             <button class="btn btn-sm view-config-btn" onclick="viewConfig('master')">
                                 <i class="fas fa-file-code"></i> View/Edit Configuration Files
@@ -791,7 +791,7 @@
                         <h3><i class="fas fa-microchip"></i> Slaver node configuration</h3>
                         <div class="form-group">
                             <label for="slaver-config">Profile Path</label>
-                            <input type="text" id="slaver-config" class="form-control" placeholder="/home/gw/code/RoboOS/slaver/config.yaml" value="/home/gw/code/RoboOS/slaver/config.yaml">
+                            <input type="text" id="slaver-config" class="form-control" placeholder="/workspace/RoboOS/slaver/config.yaml" value="/workspace/RoboOS/slaver/config.yaml">
                             <p class="form-help">The image has built-in full configuration</p>
                             <button class="btn btn-sm view-config-btn" onclick="viewConfig('slaver')">
                                 <i class="fas fa-file-code"></i> View/Edit Configuration Files
