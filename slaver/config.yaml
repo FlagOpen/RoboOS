@@ -1,7 +1,7 @@
 
 tool:
   # Has the model undergone targeted training on tool_calls
-  SUPPORT_TOOL_CALLS: true
+  SUPPORT_TOOL_CALLS: false
 
 # Cloud Server Infos
 model:

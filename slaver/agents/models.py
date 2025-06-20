@@ -450,7 +450,7 @@ class OpenAIServerModel(Model):
                 include={"role", "content", "tool_calls"}
             )
         )
-        if config["tool"]["SUPPORT_TOOL_CALLS"] == True:
+        if config["tool"]["SUPPORT_TOOL_CALLS"] == False:
             first_message = convert_chat_message(first_message)
         first_message.raw = response
         return first_message
