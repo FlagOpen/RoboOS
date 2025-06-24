@@ -117,11 +117,6 @@ class MultiStepAgent:
         """To be implemented in children classes. Should return either None if the step is not final."""
         raise NotImplementedError
 
-    async def execute_tool_call(
-        self, tool_name: str, arguments: Union[Dict[str, str], str]
-    ) -> Any:
-        return await self.tool_executor(tool_name, json.loads(arguments))
-
 class ToolCallingAgent(MultiStepAgent):
     """
     This agent uses JSON-like tool calls, using method `model.get_tool_call` to leverage the LLM engine's tool calling capabilities.
@@ -154,7 +149,7 @@ class ToolCallingAgent(MultiStepAgent):
             **kwargs,
         )
 
-    def _handle_tool_call(
+    async def _execute_tool_call(
         self, tool_name: str, tool_arguments: dict, memory_step: ActionStep
     ) -> Union[str, None]:
         self.logger.log(
@@ -163,15 +158,15 @@ class ToolCallingAgent(MultiStepAgent):
             ),
             level=LogLevel.INFO,
         )
-        observation = self.execute_tool_call(tool_name, tool_arguments)
-        self.tool_call.append({"tool_name": tool_name, "result": observation})
+        observation = await self.tool_executor(tool_name, json.loads(tool_arguments))
+        observation = observation.content[0].text
         self.logger.log(
             f"Observations: {observation.replace('[', '|')}",  # escape potential rich-tag-like components
             level=LogLevel.INFO,
         )
         return observation
 
-    def step(self, memory_step: ActionStep) -> Union[None, Any]:
+    async def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """
         Perform one step in the ReAct framework: the agent thinks, acts, and observes the result.
         Returns None if the step is not final.
@@ -204,4 +199,4 @@ class ToolCallingAgent(MultiStepAgent):
         else:
             return "final_answer"
         
-        return self._handle_tool_call(tool_name, tool_arguments, memory_step)
+        return await self._execute_tool_call(tool_name, tool_arguments, memory_step)

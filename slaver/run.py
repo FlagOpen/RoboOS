@@ -90,11 +90,7 @@ class RobotManager:
         }
         with self.lock:
             future = asyncio.run_coroutine_threadsafe(self._execute_task(task_data), self.loop)
-            try:
-                result = future.result()
-                print("Task done:", result)
-            except Exception as e:
-                print(f"Task failed or timeout: {e}")
+            future.result()
 
     async def _execute_task(self, task_data: Dict) -> None:
         """Internal task execution logic"""
@@ -115,7 +111,7 @@ class RobotManager:
             communicator=self.communicator,
             tool_executor=self.session.call_tool
         )
-        result = agent.run(task=task_data["task"])
+        result = await agent.run(task=task_data["task"])
         self._send_result(
             robot_name=self.robot_name,
             task=task_data["task"],
