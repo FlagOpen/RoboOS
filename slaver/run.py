@@ -32,6 +32,7 @@ class RobotManager:
         self.tools = None
         self.tools_path = None
         self.threads = []
+        self.loop = asyncio.get_event_loop()
         self.robot_name = None
 
         signal.signal(signal.SIGINT, self._handle_signal)
@@ -88,9 +89,14 @@ class RobotManager:
             "order_flag": data.get("order_flag", "false"),
         }
         with self.lock:
-            self._execute_task(task_data)
+            future = asyncio.run_coroutine_threadsafe(self._execute_task(task_data), self.loop)
+            try:
+                result = future.result()
+                print("Task done:", result)
+            except Exception as e:
+                print(f"Task failed or timeout: {e}")
 
-    def _execute_task(self, task_data: Dict) -> None:
+    async def _execute_task(self, task_data: Dict) -> None:
         """Internal task execution logic"""
         if self._shutdown_event.is_set():
             return
@@ -106,7 +112,8 @@ class RobotManager:
             model_path=self.model_path,
             log_file="./.log/agent.log",
             robot_name=self.robot_name,
-            communicator=self.communicator
+            communicator=self.communicator,
+            tool_executor=self.session.call_tool
         )
         result = agent.run(task=task_data["task"])
         self._send_result(

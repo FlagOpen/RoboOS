@@ -1,18 +1,16 @@
 #!/usr/bin/env python
 # coding=utf-8
-import inspect
+import json
 import time
-from collections import deque
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, List, Optional, Union
-
+from typing import Any, Callable, Dict, List, Optional, Union
+from mcp import ClientSession
 from rich.panel import Panel
 from rich.text import Text
 
-from agents.models import ChatMessage, MessageRole
-from tools.memory import ActionStep, AgentMemory, TaskStep, ToolCall
-from tools.monitoring import YELLOW_HEX, AgentLogger, LogLevel, Monitor
-from tools.utils import AgentError, AgentMaxStepsError
+from agents.models import ChatMessage
+from tools.memory import ActionStep, AgentMemory
+from tools.monitoring import AgentLogger, LogLevel, Monitor
 
 from flag_scale.flagscale.agent.communication import Communicator
 
@@ -38,6 +36,7 @@ class MultiStepAgent:
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         model_path: str,
         communicator: Communicator,
+        tool_executor: ClientSession,
         robot_name: str,
         max_steps: int = 5,
         verbosity_level: LogLevel = LogLevel.INFO,
@@ -50,6 +49,7 @@ class MultiStepAgent:
         self.model_path = model_path
         self.communicator = communicator
         self.robot_name = robot_name
+        self.tool_executor = tool_executor
         self.max_steps = max_steps
         self.step_number = 0
         self.state = {}
@@ -59,7 +59,7 @@ class MultiStepAgent:
         self.step_callbacks = step_callbacks if step_callbacks is not None else []
         self.step_callbacks.append(self.monitor.update_metrics)
 
-    def run(
+    async def run(
         self,
         task: str,
         reset: bool = True,
@@ -103,7 +103,7 @@ class MultiStepAgent:
                 start_time=step_start_time,
                 observations_images=images,
             )
-            answer = self.step(step)
+            answer = await self.step(step)
             if answer == "final_answer":
                 return "Mission accomplished"
                 
@@ -117,25 +117,10 @@ class MultiStepAgent:
         """To be implemented in children classes. Should return either None if the step is not final."""
         raise NotImplementedError
 
-    def execute_tool_call(
+    async def execute_tool_call(
         self, tool_name: str, arguments: Union[Dict[str, str], str]
     ) -> Any:
-        import importlib.util
-        from pathlib import Path
-
-        file_path = Path(self.tools_path).absolute()
-        module_name = file_path.stem
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        func = getattr(module, tool_name)
-        import json
-
-        result = func(**(json.loads(arguments)))
-
-        return result
-
+        return await self.tool_executor(tool_name, json.loads(arguments))
 
 class ToolCallingAgent(MultiStepAgent):
     """
