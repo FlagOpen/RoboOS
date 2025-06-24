@@ -38,7 +38,7 @@ class MultiStepAgent:
         communicator: Communicator,
         tool_executor: ClientSession,
         robot_name: str,
-        max_steps: int = 5,
+        max_steps: int = 20,
         verbosity_level: LogLevel = LogLevel.INFO,
         step_callbacks: Optional[List[Callable]] = None,
         log_file: Optional[str] = None,
