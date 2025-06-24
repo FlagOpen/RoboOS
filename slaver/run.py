@@ -10,7 +10,7 @@ import signal
 import sys
 from contextlib import AsyncExitStack
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from mcp import ClientSession, StdioServerParameters
@@ -32,6 +32,7 @@ class RobotManager:
         self.tools = None
         self.tools_path = None
         self.threads = []
+        self.loop = asyncio.get_event_loop()
 
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -83,14 +84,19 @@ class RobotManager:
             "order_flag": data.get("order_flag", "false"),
         }
         with self.lock:
-            self._execute_task(task_data)
+            future = asyncio.run_coroutine_threadsafe(self._execute_task(task_data), self.loop)
+            try:
+                result = future.result()
+                print("Task done:", result)
+            except Exception as e:
+                print(f"Task failed or timeout: {e}")
 
-    def _execute_task(self, task_data: Dict) -> None:
+    async def _execute_task(self, task_data: Dict) -> None:
         """Internal task execution logic"""
         if self._shutdown_event.is_set():
             return
 
-        os.makedirs("./.log", exist_ok=True)
+        os.makedirs("./.log", exist_ok=True)        
         agent = ToolCallingAgent(
             tools=self.tools,
             tools_path=self.tools_path,
@@ -98,9 +104,11 @@ class RobotManager:
             model=self.model,
             log_file="./.log/agent.log",
             robot_name=self.robot_profile["robot_name"],
-            communicator=self.communicator
+            communicator=self.communicator,
+            tool_executor=self.session.call_tool
         )
-        result = agent.run(task=task_data["task"])
+        result = await agent.run(task=task_data["task"])
+
         self._send_result(
             robot_name=self.robot_profile["robot_name"],
             task=task_data["task"],

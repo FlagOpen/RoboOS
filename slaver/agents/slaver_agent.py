@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
+import json
 import inspect
 import time
 from collections import deque
@@ -81,7 +82,7 @@ class MultiStepAgent:
         self.step_callbacks.append(self.monitor.update_metrics) 
 
     
-    def run(
+    async def run(
         self,
         task: str,
         stream: bool = False,
@@ -121,13 +122,16 @@ class MultiStepAgent:
             title=self.name if hasattr(self, "name") else None,
         )
         self.memory.steps.append(TaskStep(task=self.task, task_images=images))
-        if stream:
-            return self._run_stream(task=self.task, max_steps=max_steps, images=images)
-        return deque(
-            self._run_stream(task=self.task, max_steps=max_steps, images=images), maxlen=1
-        )[0]
+        # if stream:
+        #     return self._run_stream(task=self.task, max_steps=max_steps, images=images)
+        last_step = None
+        async for step in self._run_stream(task=self.task, max_steps=max_steps, images=images):
+            last_step = step
+        return last_step
+
         
-    def _run_stream(self, task: str, max_steps: int, images: Optional[List[str]] = None)  -> Generator[ActionStep, None, None]:
+               
+    async def _run_stream(self, task: str, max_steps: int, images: Optional[List[str]] = None):
         final_answer = None
         while not final_answer and self.step_number <= max_steps:
             step_start_time = time.time()
@@ -137,7 +141,7 @@ class MultiStepAgent:
                 observations_images=images,
             )
             try:
-                final_answer = self.step(step)
+                final_answer = await self.step(step)
 
             except AgentError as e:
                 step.error = e
@@ -206,24 +210,6 @@ class MultiStepAgent:
     def step(self) -> Optional[Any]:
         """To be implemented in children classes. Should return either None if the step is not final."""
         raise NotImplementedError
-    
-    def execute_tool_call(
-        self, tool_name: str, arguments: Union[Dict[str, str], str]
-    ) -> Any:
-        import importlib.util
-        from pathlib import Path
-        
-        file_path = Path(self.tools_path).absolute()
-        module_name = file_path.stem
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        
-        func = getattr(module, tool_name)
-        import json
-        result = func(**(json.loads(arguments)))
-            
-        return result
 
 
     def write_memory_to_messages(
@@ -259,11 +245,13 @@ class ToolCallingAgent(MultiStepAgent):
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         communicator=None,
         robot_name: str = None,
+        tool_executor = None,
         **kwargs,
     ):
         self.tool_call = []
         self.communicator = communicator
         self.robot_name = robot_name
+        self.tool_executor = tool_executor
         super().__init__(
             tools=tools,
             tools_path=tools_path,
@@ -298,23 +286,17 @@ class ToolCallingAgent(MultiStepAgent):
         return final_answer
 
 
-    def _handle_tool_call(self, tool_name: str, tool_arguments: dict, memory_step: ActionStep) -> Union[str, None]:
-        self.logger.log(
-            Panel(
-                Text(f"Calling tool: '{tool_name}' with arguments: {tool_arguments}")
-            ),
-            level=LogLevel.INFO,
-        )
-        observation = self.execute_tool_call(tool_name, tool_arguments)            
-        self.tool_call.append({"tool_name": tool_name, "result": observation})
-        self.logger.log(
-            f"Observations: {observation.replace('[', '|')}",  # escape potential rich-tag-like components
-            level=LogLevel.INFO,
-        )
-        memory_step.observations = str(observation).strip()
-        return None
+    async def execute_tool_call(
+        self, tool_name: str, arguments: Union[Dict[str, str], str]
+    ) -> Any:
+        if isinstance(arguments, str):
+            arguments = json.loads(arguments)
+        
+        result = await self.tool_executor(tool_name, arguments)
+        self.tool_call.append({"tool_name": tool_name, "result": result.content[0].text})
+        return result.content[0].text
 
-    def step(self, memory_step: ActionStep) -> Union[None, Any]:
+    async def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """
         Perform one step in the ReAct framework: the agent thinks, acts, and observes the result.
         Returns None if the step is not final.
@@ -353,4 +335,18 @@ class ToolCallingAgent(MultiStepAgent):
         memory_step.tool_calls = [
             ToolCall(name=tool_name, arguments=tool_arguments, id=tool_call_id)
         ]
-        return self._handle_tool_call(tool_name, tool_arguments, memory_step)
+        
+        self.logger.log(
+            Panel(
+                Text(f"Calling tool: '{tool_name}' with arguments: {tool_arguments}")
+            ),
+            level=LogLevel.INFO,
+        )
+        observation = await self.execute_tool_call(tool_name, tool_arguments)     
+  
+        self.logger.log(
+            f"Observations: {observation.replace('[', '|')}",  # escape potential rich-tag-like components
+            level=LogLevel.INFO,
+        )
+        memory_step.observations = str(observation).strip()
+        return None
