@@ -10,7 +10,7 @@ import signal
 import sys
 from contextlib import AsyncExitStack
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from mcp import ClientSession, StdioServerParameters
@@ -28,11 +28,11 @@ class RobotManager:
         self.heartbeat_interval = 60
         self.lock = threading.Lock()
         self._shutdown_event = threading.Event()
-        self.model = self._gat_model_info_from_config()
+        self.model, self.model_path = self._gat_model_info_from_config()
         self.tools = None
         self.tools_path = None
         self.threads = []
-        self.loop = asyncio.get_event_loop()
+        self.robot_name = None
 
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -53,6 +53,7 @@ class RobotManager:
         """Initial model"""
         for candidate in config["model"]["MODEL_LIST"]:
             if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
+                model_path=None
                 if candidate["CLOUD_TYPE"] == "azure":
                     model_client = AzureOpenAIServerModel(
                         model_id=config["model"]["MODEL_SELECT"],
@@ -61,17 +62,19 @@ class RobotManager:
                         api_key=candidate["AZURE_API_KEY"],
                         api_version=candidate["AZURE_API_VERSION"],
                     )
+                    model_path=candidate["CLOUD_MODEL"]
                 elif candidate["CLOUD_TYPE"] == "default":
                     model_client = OpenAIServerModel(
                         api_key=candidate["CLOUD_API_KEY"],
                         api_base=candidate["CLOUD_SERVER"],
                         model_id=candidate["CLOUD_MODEL"],
                     )
+                    model_path=candidate["CLOUD_MODEL"]
                 else:
                     raise ValueError(
                         f"Unsupported cloud type: {candidate['CLOUD_TYPE']}"
                     )
-                return model_client
+                return model_client, model_path
 
     def handle_task(self, data: Dict) -> None:
         """Process incoming tasks with thread-safe operation"""
@@ -81,36 +84,33 @@ class RobotManager:
         task_data = {
             "task": data.get("task"),
             "task_id": data.get("task_id"),
+            "refresh": data.get("refresh"),
             "order_flag": data.get("order_flag", "false"),
         }
         with self.lock:
-            future = asyncio.run_coroutine_threadsafe(self._execute_task(task_data), self.loop)
-            try:
-                result = future.result()
-                print("Task done:", result)
-            except Exception as e:
-                print(f"Task failed or timeout: {e}")
+            self._execute_task(task_data)
 
-    async def _execute_task(self, task_data: Dict) -> None:
+    def _execute_task(self, task_data: Dict) -> None:
         """Internal task execution logic"""
         if self._shutdown_event.is_set():
             return
 
-        os.makedirs("./.log", exist_ok=True)        
+        os.makedirs("./.log", exist_ok=True)
+        if task_data["refresh"]:
+            self.communicator.clear(self.robot_name)
         agent = ToolCallingAgent(
             tools=self.tools,
             tools_path=self.tools_path,
             verbosity_level=2,
             model=self.model,
+            model_path=self.model_path,
             log_file="./.log/agent.log",
-            robot_name=self.robot_profile["robot_name"],
-            communicator=self.communicator,
-            tool_executor=self.session.call_tool
+            robot_name=self.robot_name,
+            communicator=self.communicator
         )
-        result = await agent.run(task=task_data["task"])
-
+        result = agent.run(task=task_data["task"])
         self._send_result(
-            robot_name=self.robot_profile["robot_name"],
+            robot_name=self.robot_name,
             task=task_data["task"],
             task_id=task_data["task_id"],
             result=result,
@@ -181,6 +181,7 @@ class RobotManager:
 
         """Complete robot registration with thread management"""
         robot_name = self.robot_profile["robot_name"]
+        self.robot_name = robot_name
         register = {
             "robot_name": robot_name,
             "robot_type": self.robot_profile["robot_type"],

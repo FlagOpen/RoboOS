@@ -5,7 +5,7 @@ import yaml
 import uuid
 import threading
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict
 from agents.planner import GlobalTaskPlanner
 from flag_scale.flagscale.agent.communication import Communicator
 
@@ -159,17 +159,13 @@ class GlobalAgent:
         ).start()
         self.logger.info("Started listening for robot registrations...")
 
-    def publish_global_task(self, task: str, task_id: str) -> Dict:
+    def publish_global_task(self, task: str, refresh: bool, task_id: str) -> Dict:      
         """Publish a global task to all Agents"""
         self.logger.info(f"Publishing global task: {task}")
-        current_robot_info = self.communicator.gat_all_values("ROBOT_INFO_*")
         current_scene_info = self.communicator.gat_all_values("SCENE_INFO_*")
         current_memory = {
-            "robot_profile": current_robot_info,
             "scene_profile": current_scene_info,
         }
-        self.logger.debug(f"Current Agents:\n{current_robot_info}")
-        self.logger.debug(f"Current Scenes:\n{current_robot_info}")
         response = self.planner.forward(task, current_memory)
         reasoning_and_subtasks = self._extract_json(response)
 
@@ -203,6 +199,7 @@ class GlobalAgent:
                 subtask_data = {
                     "task_id": task_id,
                     "task": tasks["subtask"],
+                    "refresh": refresh,
                     "order": order_flag,
                 }
                 self.communicator.send(

@@ -71,6 +71,7 @@ def publish_task():
     Request JSON format:
     {
         "task": "task_content"  # The task to be published
+        "refresh": "true" # Boolean value, default is true, indicating whether to refresh the cached robot memory
     }
 
     Returns:
@@ -84,12 +85,14 @@ def publish_task():
             return jsonify({"error": "Invalid request - 'task' field required"}), 400
         if not isinstance(data["task"], list):
             data["task"] = [data["task"]]
+        if "refresh" not in data:
+            data["refresh"] = False
             
         task_id = data.get("task_id")
         for task in data["task"]:
             if not isinstance(task, str):
                 return jsonify({"error": "Invalid task format - must be a string"}), 400
-            subtask_list = master_agent.publish_global_task(data["task"], task_id)
+            subtask_list = master_agent.publish_global_task(data["task"], data["refresh"], task_id)
 
         return jsonify(
             {

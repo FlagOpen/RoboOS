@@ -98,21 +98,6 @@ class ActionStep(MemoryStep):
                 )
             )
 
-        if self.observations is not None:
-            messages.append(
-                Message(
-                    role=MessageRole.TOOL_RESPONSE,
-                    content=[
-                        {
-                            "type": "text",
-                            "text": {
-                                "Call id": self.tool_calls[0].id if self.tool_calls else None,
-                                "Observation": self.observations
-                            }
-                        }
-                    ],
-                )
-            )
 
         if self.observations_images:
             messages.append(
@@ -138,26 +123,6 @@ class PlanningStep(MemoryStep):
     facts: str
     model_output_message_plan: ChatMessage
     plan: str
-
-    def to_messages(self, summary_mode: bool, **kwargs) -> List[Message]:
-        messages = []
-        messages.append(
-            Message(
-                role=MessageRole.ASSISTANT,
-                content=[
-                    {"type": "text", "text": f"[FACTS LIST]: {self.facts.strip()}"}
-                ],
-            )
-        )
-
-        if not summary_mode:  # This step is not shown to a model writing a plan to avoid influencing the new plan
-            messages.append(
-                Message(
-                    role=MessageRole.ASSISTANT,
-                    content=[{"type": "text", "text": f"[PLAN]: {self.plan.strip()}"}],
-                )
-            )
-        return messages
 
 
 @dataclass

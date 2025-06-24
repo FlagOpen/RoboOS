@@ -15,17 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import importlib.util
+import json
 import logging
+import re
+import uuid
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from tools.utils import (
-    encode_image_base64,
-    make_image_url,
-    config
-)
+from tools.utils import Communicator, config
 
 logger = logging.getLogger(__name__)
 
@@ -68,18 +67,6 @@ class ChatMessage:
     raw: Optional[Any] = None  # Stores the raw output from the API
 
     @classmethod
-    def from_hf_api(cls, message, raw) -> "ChatMessage":
-        tool_calls = None
-        if getattr(message, "tool_calls", None) is not None:
-            tool_calls = [
-                ChatMessageToolCall.from_hf_api(tool_call)
-                for tool_call in message.tool_calls
-            ]
-        return cls(
-            role=message.role, content=message.content, tool_calls=tool_calls, raw=raw
-        )
-
-    @classmethod
     def from_dict(cls, data: dict) -> "ChatMessage":
         if data.get("tool_calls"):
             tool_calls = [
@@ -92,6 +79,7 @@ class ChatMessage:
             ]
             data["tool_calls"] = tool_calls
         return cls(**data)
+
 
 class MessageRole(str, Enum):
     USER = "user"
@@ -111,74 +99,6 @@ tool_role_conversions = {
 }
 
 
-def get_clean_message_list(
-    message_list: List[Dict[str, str]],
-    role_conversions: Dict[MessageRole, MessageRole] = {},
-    convert_images_to_image_urls: bool = False,
-    flatten_messages_as_text: bool = False,
-) -> List[Dict[str, str]]:
-    """
-    Subsequent messages with the same role will be concatenated to a single message.
-    output_message_list is a list of messages that will be used to generate the final message that is chat template compatible with transformers LLM chat template.
-
-    Args:
-        message_list (`list[dict[str, str]]`): List of chat messages.
-        role_conversions (`dict[MessageRole, MessageRole]`, *optional* ): Mapping to convert roles.
-        convert_images_to_image_urls (`bool`, default `False`): Whether to convert images to image URLs.
-        flatten_messages_as_text (`bool`, default `False`): Whether to flatten messages as text.
-    """
-    output_message_list = []
-    message_list = deepcopy(message_list)  # Avoid modifying the original list
-    for message in message_list:
-        role = message["role"]
-        if role not in MessageRole.roles():
-            raise ValueError(
-                f"Incorrect role {role}, only {MessageRole.roles()} are supported for now."
-            )
-
-        if role in role_conversions:
-            message["role"] = role_conversions[role]
-        # encode images if needed
-        if isinstance(message["content"], list):
-            for element in message["content"]:
-                if element["type"] == "image":
-                    assert (
-                        not flatten_messages_as_text
-                    ), f"Cannot use images with {flatten_messages_as_text=}"
-                    if convert_images_to_image_urls:
-                        element.update(
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": make_image_url(
-                                        encode_image_base64(element.pop("image"))
-                                    )
-                                },
-                            }
-                        )
-                    else:
-                        element["image"] = encode_image_base64(element["image"])
-
-        if (
-            len(output_message_list) > 0
-            and message["role"] == output_message_list[-1]["role"]
-        ):
-            assert isinstance(message["content"], list), "Error: wrong content:" + str(
-                message["content"]
-            )
-            Observation = "," + message["content"][0]["text"]["Observation"]
-            if type(output_message_list[-1]["content"]) is str:
-                output_message_list[-1]["content"] += ". Current Status: " + Observation
-            else:
-                output_message_list[-1]["content"][0]["text"] += Observation
-        else:
-            if flatten_messages_as_text:
-                content = message["content"][0]["text"]
-            else:
-                content = message["content"]
-            output_message_list.append({"role": message["role"], "content": content})
-    return output_message_list
-
 class Model:
     def __init__(
         self,
@@ -193,61 +113,6 @@ class Model:
         self.kwargs = kwargs
         self.last_input_token_count = None
         self.last_output_token_count = None
-
-    def _prepare_completion_kwargs(
-        self,
-        messages: List[Dict[str, str]],
-        stop_sequences: Optional[List[str]] = None,
-        grammar: Optional[str] = None,
-        tools_to_call_from: Optional[List[str]] = None,
-        custom_role_conversions: Optional[Dict[str, str]] = None,
-        convert_images_to_image_urls: bool = False,
-        **kwargs,
-    ) -> Dict:
-        """
-        Prepare parameters required for model invocation, handling parameter priorities.
-
-        Parameter priority from high to low:
-        1. Explicitly passed kwargs
-        2. Specific parameters (stop_sequences, grammar, etc.)
-        3. Default values in self.kwargs
-        """
-        # Clean and standardize the message list
-        messages = get_clean_message_list(
-            messages,
-            role_conversions=custom_role_conversions or tool_role_conversions,
-            convert_images_to_image_urls=convert_images_to_image_urls,
-            flatten_messages_as_text=self.flatten_messages_as_text,
-        )
-
-        # Use self.kwargs as the base configuration
-        completion_kwargs = {
-            **self.kwargs,
-            "messages": messages,
-        }
-
-        # Handle specific parameters
-        if stop_sequences is not None:
-            completion_kwargs["stop"] = stop_sequences
-        if grammar is not None:
-            completion_kwargs["grammar"] = grammar
-            
-        # Handle tools parameter
-        if tools_to_call_from:
-            completion_kwargs["tools"] = tools_to_call_from
-
-        completion_kwargs["n"] = kwargs.get("n", 1)
-        completion_kwargs["temperature"] = kwargs.get("temperature", 0.0)
-        completion_kwargs["top_p"] = kwargs.get("top_p", 1.0)
-        completion_kwargs["max_tokens"] = kwargs.get("max_tokens", 8192)
-
-        # Finally, use the passed-in kwargs to override all settings
-        completion_kwargs.update(kwargs)
-
-        # Finally, use the passed-in kwargs to override all settings
-        completion_kwargs.update(kwargs)
-
-        return completion_kwargs
 
     def get_token_counts(self) -> Dict[str, int]:
         return {
@@ -315,16 +180,12 @@ class Model:
         return model_dictionary
 
 
-from dataclasses import dataclass
-import json
-import uuid
-import re
-
 @dataclass
 class FunctionCall:
     name: str
     arguments: str
     description: str = None
+
 
 @dataclass
 class ToolCall:
@@ -332,35 +193,34 @@ class ToolCall:
     type: str
     function: FunctionCall
 
+
 def convert_chat_message(original_message):
     content = original_message.content
-    
-    json_match = re.search(r'```json\n(.*?)\n```', content, flags=re.DOTALL)
+
+    json_match = re.search(r"```json\n(.*?)\n```", content, flags=re.DOTALL)
     if json_match:
         json_str = json_match.group(1).strip()
         parsed_data = json.loads(json_str)
-        if isinstance(parsed_data, dict) and 'name' in parsed_data:
+        if isinstance(parsed_data, dict) and "name" in parsed_data:
             return ChatMessage(
-                role='assistant',
+                role="assistant",
                 content=None,
-                tool_calls=[ToolCall(
-                    id=f'call_{uuid.uuid4().hex}',
-                    type='function',
-                    function=FunctionCall(
-                        name=parsed_data['name'],
-                        arguments=json.dumps(parsed_data.get('arguments', {})),
-                        description=None
+                tool_calls=[
+                    ToolCall(
+                        id=f"call_{uuid.uuid4().hex}",
+                        type="function",
+                        function=FunctionCall(
+                            name=parsed_data["name"],
+                            arguments=json.dumps(parsed_data.get("arguments", {})),
+                            description=None,
+                        ),
                     )
-                )],
-                raw=None
+                ],
+                raw=None,
             )
-    
-    return ChatMessage(
-        role='assistant',
-        content=content,
-        tool_calls=[],
-        raw=None
-    )
+
+    return ChatMessage(role="assistant", content=content, tool_calls=[], raw=None)
+
 
 class OpenAIServerModel(Model):
     """This model connects to an OpenAI-compatible API server.
@@ -424,26 +284,42 @@ class OpenAIServerModel(Model):
 
     def __call__(
         self,
-        messages: List[Dict[str, str]],
+        task: str,
+        current_status: str,
+        model_path: str,
         stop_sequences: Optional[List[str]] = None,
-        grammar: Optional[str] = None,
         tools_to_call_from: Optional[List[str]] = None,
-        **kwargs,
     ) -> ChatMessage:
-        completion_kwargs = self._prepare_completion_kwargs(
-            messages=messages,
-            stop_sequences=stop_sequences,
-            grammar=grammar,
-            tools_to_call_from=tools_to_call_from,
-            model=self.model_id,
-            custom_role_conversions=self.custom_role_conversions,
-            convert_images_to_image_urls=True,
-            tool_choice="auto",
-            **kwargs,
-        )
+        content = task
+        if len(current_status) > 0:
+            content += " Currently completing the following actions: "
+            for current_statu in current_status:
+                content += f"{current_statu} "
+        completion_kwargs = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": content
+                }
+            ],
+            "model": model_path,
+            "n": 1,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "max_tokens": 8192,
+        }
+
+        if stop_sequences is not None:
+            completion_kwargs["stop"] = stop_sequences
+
+        if tools_to_call_from:
+            completion_kwargs["tools"] = tools_to_call_from
+        
+        print(completion_kwargs)
         response = self.client.chat.completions.create(**completion_kwargs)
         self.last_input_token_count = response.usage.prompt_tokens
         self.last_output_token_count = response.usage.completion_tokens
+        print(response)
 
         first_message = ChatMessage.from_dict(
             response.choices[0].message.model_dump(
@@ -454,6 +330,7 @@ class OpenAIServerModel(Model):
             first_message = convert_chat_message(first_message)
         first_message.raw = response
         return first_message
+
 
 class AzureOpenAIServerModel(OpenAIServerModel):
     """This model connects to an Azure OpenAI deployment.

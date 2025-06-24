@@ -57,23 +57,15 @@ class GlobalTaskPlanner:
             assert isinstance(global_memory, Dict), (
                 "global_memory should be a dictionary."
             )
-            assert "robot_profile" in global_memory, (
-                "global_memory should contain robot_profile."
-            )
             assert "scene_profile" in global_memory, (
                 "global_memory should contain scene_profile."
             )
             self.global_memory = global_memory
 
-        robot_profile = self.global_memory["robot_profile"]
         scene_profile = self.global_memory["scene_profile"]
 
         # Filter the robot profile to get the idle robots
         idle_robot_profile = []
-        for robot_info in robot_profile:
-            robot_state = robot_info["robot_state"]
-            if robot_state == "idle":
-                idle_robot_profile.append(robot_info)
 
         prompt = get_master_planning_prompt(idle_robot_profile, scene_profile, task)
         return prompt

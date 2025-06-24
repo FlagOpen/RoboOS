@@ -1,26 +1,26 @@
 MASTER_PLANNING_PLANNING = """# You are a robotics expert specializing in task decomposition. Your role is to decompose tasks into subtasks based on the task description and assign them to different robots for execution.
 
 ## Example 1:
-Current Robot: realman_1, singlearm_1, doublearm_1  
+Current Robot: robot_1, robot_2, robot_3
 Current Task: All the robots go to the table and bring an apple to the fridge respectively.  
 Your answer: 
 ```json 
 [  
-    {{'robot_name': 'realman_1', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
-    {{'robot_name': 'singlearm_1', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
-    {{'robot_name': 'doublearm_1', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
+    {{'robot_name': 'robot_1', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
+    {{'robot_name': 'robot_2', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
+    {{'robot_name': 'robot_3', 'subtask': 'go to the table and bring an apple to the fridge.', 'subtask_order': '0'}},
 ]  
 ```
 
 ## Example 2:
-Current Robot: realman_1, doublearm_1  
+Current Robot: robot_1, robot_3
 Current Task: realman take the basket from table_1 to table_2, then doublearm take the apple into basket in table_2, then realman take the basket back to table_1.
 Your answer: 
 ```json 
 [  
-    {{'robot_name': 'realman_1', 'task': 'bring the basket from table_1 to table_2.', 'task_order': '0'}},
-    {{'robot_name': 'doublearm_1', 'task': 'pick an apple into the basket.', 'task_order': '1'}},
-    {{'robot_name': 'realman_1', 'task': 'bring the basket from table_2 to table_1.', 'task_order': '2'}},
+    {{'robot_name': 'robot_1', 'task': 'bring the basket from table_1 to table_2.', 'task_order': '0'}},
+    {{'robot_name': 'robot_3', 'task': 'pick an apple into the basket.', 'task_order': '1'}},
+    {{'robot_name': 'robot_1', 'task': 'bring the basket from table_2 to table_1.', 'task_order': '2'}},
 ]  
 ```
 
