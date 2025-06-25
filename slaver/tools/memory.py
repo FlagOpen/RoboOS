@@ -14,12 +14,11 @@
 # limitations under the License.
 from dataclasses import asdict, dataclass
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, List, TypedDict, Union, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
 from agents.models import ChatMessage, MessageRole
 from tools.monitoring import AgentLogger, LogLevel
 from tools.utils import AgentError, make_json_serializable
-
 
 if TYPE_CHECKING:
     from agents.models import ChatMessage
@@ -68,9 +67,9 @@ class ActionStep(MemoryStep):
         # We overwrite the method to parse the tool_calls and action_output manually
         return {
             "model_input_messages": self.model_input_messages,
-            "tool_calls": [tc.dict() for tc in self.tool_calls]
-            if self.tool_calls
-            else [],
+            "tool_calls": (
+                [tc.dict() for tc in self.tool_calls] if self.tool_calls else []
+            ),
             "start_time": self.start_time,
             "end_time": self.end_time,
             "step": self.step_number,
@@ -97,7 +96,6 @@ class ActionStep(MemoryStep):
                     content=[{"type": "text", "text": self.model_output.strip()}],
                 )
             )
-
 
         if self.observations_images:
             messages.append(
@@ -133,6 +131,7 @@ class TaskStep(MemoryStep):
     def to_messages(self) -> List[Message]:
         content = f"{self.task}"
         return [Message(role=MessageRole.USER, content=content)]
+
 
 class AgentMemory:
     def __init__(self):

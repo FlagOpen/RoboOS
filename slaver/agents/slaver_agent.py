@@ -4,15 +4,14 @@ import json
 import time
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Union
+
+from agents.models import ChatMessage
+from flag_scale.flagscale.agent.communication import Communicator
 from mcp import ClientSession
 from rich.panel import Panel
 from rich.text import Text
-
-from agents.models import ChatMessage
 from tools.memory import ActionStep, AgentMemory
 from tools.monitoring import AgentLogger, LogLevel, Monitor
-
-from flag_scale.flagscale.agent.communication import Communicator
 
 logger = getLogger(__name__)
 
@@ -95,7 +94,7 @@ class MultiStepAgent:
             level=LogLevel.INFO,
             title=self.name if hasattr(self, "name") else None,
         )
-        
+
         while self.step_number <= max_steps:
             step_start_time = time.time()
             step = ActionStep(
@@ -106,16 +105,17 @@ class MultiStepAgent:
             answer = await self.step(step)
             if answer == "final_answer":
                 return "Mission accomplished"
-                
+
             self.communicator.record(self.robot_name, answer)
             step.end_time = time.time()
             self.step_number += 1
-        
+
         return "Maximum number of attempts reached, Mission not completed"
 
     def step(self) -> Optional[Any]:
         """To be implemented in children classes. Should return either None if the step is not final."""
         raise NotImplementedError
+
 
 class ToolCallingAgent(MultiStepAgent):
     """
@@ -133,7 +133,7 @@ class ToolCallingAgent(MultiStepAgent):
         tools: List[Dict[str, str]],
         tools_path: str,
         model: Callable[[List[Dict[str, str]]], ChatMessage],
-        model_path:str,
+        model_path: str,
         communicator: Communicator,
         robot_name: str,
         **kwargs,
@@ -144,8 +144,8 @@ class ToolCallingAgent(MultiStepAgent):
             tools_path=tools_path,
             model=model,
             model_path=model_path,
-            communicator = communicator,
-            robot_name = robot_name,
+            communicator=communicator,
+            robot_name=robot_name,
             **kwargs,
         )
 
@@ -198,5 +198,5 @@ class ToolCallingAgent(MultiStepAgent):
             tool_arguments = tool_call.function.arguments
         else:
             return "final_answer"
-        
+
         return await self._execute_tool_call(tool_name, tool_arguments, memory_step)

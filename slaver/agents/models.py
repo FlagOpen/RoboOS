@@ -19,12 +19,11 @@ import json
 import logging
 import re
 import uuid
-from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from tools.utils import Communicator, config
+from tools.utils import config
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,6 @@ class Model:
         self,
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
-        grammar: Optional[str] = None,
         **kwargs,
     ) -> ChatMessage:
         """Process the input messages and return the model's response.
@@ -296,12 +294,7 @@ class OpenAIServerModel(Model):
             for current_statu in current_status:
                 content += f"{current_statu} "
         completion_kwargs = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
+            "messages": [{"role": "user", "content": content}],
             "model": model_path,
             "n": 1,
             "temperature": 0.0,
@@ -314,7 +307,7 @@ class OpenAIServerModel(Model):
 
         if tools_to_call_from:
             completion_kwargs["tools"] = tools_to_call_from
-        
+
         print(completion_kwargs)
         response = self.client.chat.completions.create(**completion_kwargs)
         self.last_input_token_count = response.usage.prompt_tokens

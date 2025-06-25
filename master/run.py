@@ -1,15 +1,14 @@
-import psutil
 import traceback
 
-from flask_cors import CORS
-from flask import Flask, request, jsonify, render_template, send_from_directory
-from flask_socketio import SocketIO
+import psutil
 from agents.agent import GlobalAgent
-
+from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask_cors import CORS
+from flask_socketio import SocketIO
 
 app = Flask(__name__, static_folder="assets")
-CORS(app, resources={r"/*": {"origins": "*"}})  
-socketio = SocketIO(app, cors_allowed_origins="*") 
+CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 master_agent = GlobalAgent(config_path="config.yaml")
@@ -17,7 +16,7 @@ master_agent = GlobalAgent(config_path="config.yaml")
 
 def send_text_to_forntend(text):
     socketio.emit("text_update", {"data": text}, namespace="/")
-    
+
 
 @app.route("/system_status", methods=["GET"])
 def system_status():
@@ -34,7 +33,7 @@ def system_status():
 
     return jsonify(
         {
-            "cpu_load": round(cpu_load, 1),  
+            "cpu_load": round(cpu_load, 1),
             "memory_usage": round(memory_usage, 1),
         }
     )
@@ -87,20 +86,25 @@ def publish_task():
             data["task"] = [data["task"]]
         if "refresh" not in data:
             data["refresh"] = False
-            
+
         task_id = data.get("task_id")
         for task in data["task"]:
             if not isinstance(task, str):
                 return jsonify({"error": "Invalid task format - must be a string"}), 400
-            subtask_list = master_agent.publish_global_task(data["task"], data["refresh"], task_id)
+            subtask_list = master_agent.publish_global_task(
+                data["task"], data["refresh"], task_id
+            )
 
-        return jsonify(
-            {
-                "status": "success",
-                "message": "Task published successfully",
-                "data": subtask_list
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Task published successfully",
+                    "data": subtask_list,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         print(traceback.print_exc())

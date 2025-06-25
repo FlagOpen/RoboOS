@@ -1,11 +1,12 @@
-import os
-import logging
 import json
-import yaml
-import uuid
+import logging
+import os
 import threading
+import uuid
 from collections import defaultdict
 from typing import Dict
+
+import yaml
 from agents.planner import GlobalTaskPlanner
 from flag_scale.flagscale.agent.communication import Communicator
 
@@ -159,7 +160,7 @@ class GlobalAgent:
         ).start()
         self.logger.info("Started listening for robot registrations...")
 
-    def publish_global_task(self, task: str, refresh: bool, task_id: str) -> Dict:      
+    def publish_global_task(self, task: str, refresh: bool, task_id: str) -> Dict:
         """Publish a global task to all Agents"""
         self.logger.info(f"Publishing global task: {task}")
         current_scene_info = self.communicator.gat_all_values("SCENE_INFO_*")

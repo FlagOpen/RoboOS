@@ -1,6 +1,7 @@
+from typing import Any, Dict, Optional, Union
+
 import yaml
 from openai import AzureOpenAI, OpenAI
-from typing import Dict, Optional, Union, Any
 from prompt.utils import get_master_planning_prompt, read_yaml_file
 
 
@@ -16,17 +17,17 @@ class GlobalTaskPlanner:
         self.name = name
         if config is None:
             config = {}
-            
+
         if isinstance(config, str):
             config = self._init_config(config)
-        
+
         if not isinstance(config, Dict):
             raise TypeError("config must be a dictionary or path string")
         # Initialize the planner with the config
-        
+
         profile_section: Dict = config.get("profile", {})
         logger_section: Dict = config.get("logger", {})
-        
+
         self.robot_profile_path: Optional[str] = (
             profile_section.get("ROBOT_PROFILE_PATH")
             if profile_section.get("ROBOT_PROFILE_ENABLE", False)
@@ -37,29 +38,27 @@ class GlobalTaskPlanner:
             if profile_section.get("SCENE_PROFILE_ENABLE", False)
             else None
         )
-        self.robot_memory_path: str = logger_section["ROBOT_MEMORY_YAML"]  
+        self.robot_memory_path: str = logger_section["ROBOT_MEMORY_YAML"]
         self.scene_memory_path: str = logger_section["SCENE_MEMORY_YAML"]
-        
 
-        self.global_memory: Dict = read_yaml_file(
-            self.robot_profile_path, 
-            self.scene_profile_path
-        ) or {}  
+        self.global_memory: Dict = (
+            read_yaml_file(self.robot_profile_path, self.scene_profile_path) or {}
+        )
         self.global_model: Any
         self.model_name: str
         self.global_model, self.model_name = self._gat_model_info_from_config(
-            config["model"] 
+            config["model"]
         )
 
     def _get_prompt_from_memory(self, task: str, global_memory: Dict = None) -> str:
         """Get the prompt from memory."""
         if global_memory is not None:
-            assert isinstance(global_memory, Dict), (
-                "global_memory should be a dictionary."
-            )
-            assert "scene_profile" in global_memory, (
-                "global_memory should contain scene_profile."
-            )
+            assert isinstance(
+                global_memory, Dict
+            ), "global_memory should be a dictionary."
+            assert (
+                "scene_profile" in global_memory
+            ), "global_memory should contain scene_profile."
             self.global_memory = global_memory
 
         scene_profile = self.global_memory["scene_profile"]

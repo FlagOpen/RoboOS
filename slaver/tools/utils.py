@@ -22,13 +22,13 @@ import base64
 import importlib.metadata
 import importlib.util
 import json
-import yaml
 import re
 from functools import lru_cache
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict
-from flag_scale.flagscale.agent.communication import Communicator
 
+import yaml
+from flag_scale.flagscale.agent.communication import Communicator
 
 if TYPE_CHECKING:
     from memory import AgentLogger
@@ -160,9 +160,10 @@ class Config:
             config = yaml.safe_load(f)
         return config
 
+
 config = Config.load_config()
 
-communicator =  Communicator(
+communicator = Communicator(
     host=config["communicator"]["HOST"],
     port=config["communicator"]["PORT"],
     db=config["communicator"]["DB"],
