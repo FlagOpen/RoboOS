@@ -19,12 +19,11 @@ import json
 import logging
 import re
 import uuid
-from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from tools.utils import Communicator, config
+from tools.utils import config
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,6 @@ class Model:
         self,
         messages: List[Dict[str, str]],
         stop_sequences: Optional[List[str]] = None,
-        grammar: Optional[str] = None,
         **kwargs,
     ) -> ChatMessage:
         """Process the input messages and return the model's response.

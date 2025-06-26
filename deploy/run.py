@@ -7,6 +7,7 @@ from pathlib import Path
 import redis
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from ruamel.yaml import YAML
+
 from utils import recursive_update, split_dot_keys
 
 yaml = YAML()
@@ -83,6 +84,7 @@ def saveconfig():
 
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
+
         with open(file_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.load(f)
 
@@ -91,6 +93,7 @@ def saveconfig():
         print(processed_config)
 
         yaml_data = recursive_update(yaml_data, processed_config)
+
 
         with open(file_path, "w", encoding="utf-8") as f:
             yaml.dump(yaml_data, f)
