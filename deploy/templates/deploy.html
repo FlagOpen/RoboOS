@@ -1364,30 +1364,21 @@ Waiting for deployment to begin...
         }
 
 
-        function jsonToConfigFormat(jsonData) {
-            let configText = `# ${currentEditingConfig === 'master' ? 'Master' : 'Slaver'} node configuration\n\n`;
-            
+        function jsonToConfigFormat(obj, indent = 0) {
+            let configText = '';
+            const indentStr = '  '.repeat(indent); 
 
-            for (const [section, settings] of Object.entries(jsonData)) {
-                configText += `[${section}]\n`;
-                
+            for (const key in obj) {
+                const value = obj[key];
 
-                for (const [key, value] of Object.entries(settings)) {
-                    if (Array.isArray(value)) {
-
-                        value.forEach((item, index) => {
-                            for (const [subKey, subValue] of Object.entries(item)) {
-                                configText += `${key}.${subKey} = ${formatValue(subValue)}\n`;
-                            }
-                        });
-                    } else {
-                        configText += `${key} = ${formatValue(value)}\n`;
-                    }
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    configText += `${indentStr}[${key}]\n`;
+                    configText += jsonToConfigFormat(value, indent + 1);
+                } else {
+                    configText += `${indentStr}${key} = ${value}\n`;
                 }
-                
-                configText += '\n';
             }
-            
+
             return configText;
         }
 
@@ -1447,32 +1438,49 @@ Waiting for deployment to begin...
             }
         }
 
-
         function configToJsonFormat(configText) {
-            const result = {};
-            let currentSection = null;
-            
             const lines = configText.split('\n');
-            
-            lines.forEach(line => {
+            const result = {};
+            const pathStack = [];
 
-                if (!line.trim() || line.trim().startsWith('#')) return;
-                
+            for (let rawLine of lines) {
+                if (!rawLine.trim() || rawLine.trim().startsWith('#')) continue;
 
-                const sectionMatch = line.match(/^\[([^\]]+)\]/);
+                const indent = rawLine.match(/^\s*/)[0].length;
+                const line = rawLine.trim();
+
+                const sectionMatch = line.match(/^\[([^\]]+)\]$/);
                 if (sectionMatch) {
-                    currentSection = sectionMatch[1];
-                    result[currentSection] = {};
-                    return;
-                }
-                
+                    const section = sectionMatch[1];
+                    const level = indent / 2;
+                    pathStack.length = level;
+                    pathStack[level] = section;
 
-                if (currentSection && line.includes('=')) {
-                    const [key, value] = line.split('=').map(part => part.trim());
-                    result[currentSection][key] = parseValue(value);
+                    let current = result;
+                    for (let i = 0; i <= level; i++) {
+                        const key = pathStack[i];
+                        if (!current[key]) current[key] = {};
+                        current = current[key];
+                    }
+                } else {
+                    const [keyPart, ...valueParts] = line.split('=');
+                    const key = keyPart.trim();
+                    let value = valueParts.join('=').trim();
+
+                    if (value === 'true') value = true;
+                    else if (value === 'false') value = false;
+                    else if (!isNaN(value)) value = Number(value);
+
+                    let current = result;
+                    for (let i = 0; i < pathStack.length; i++) {
+                        const key = pathStack[i];
+                        if (!current[key]) current[key] = {};
+                        current = current[key];
+                    }
+                    current[key] = value;
                 }
-            });
-            
+            }
+
             return result;
         }
 

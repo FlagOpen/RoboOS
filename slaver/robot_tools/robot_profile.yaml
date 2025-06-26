@@ -4,7 +4,7 @@ imports:
 
 robot_name: "robot_1"
 robot_type: "realman_single"
-robot_tools: "robot_tools/robot_tools.py"
+robot_tools: "robot_tools/robot_tools_mcp.py"
 current_position: "initialPosition"
 navigate_position:
   - "initialPosition"

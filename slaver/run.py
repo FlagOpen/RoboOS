@@ -3,19 +3,20 @@
 import asyncio
 import json
 import os
-import yaml
-import threading
-import time
 import signal
 import sys
+import threading
+import time
 from contextlib import AsyncExitStack
 from datetime import datetime
 from typing import Dict, List, Optional
+
+import yaml
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from tools.utils import config, communicator
+from tools.utils import communicator, config
 
 
 class RobotManager:
@@ -30,7 +31,6 @@ class RobotManager:
         self._shutdown_event = threading.Event()
         self.model, self.model_path = self._gat_model_info_from_config()
         self.tools = None
-        self.tools_path = None
         self.threads = []
         self.loop = asyncio.get_event_loop()
         self.robot_name = None
@@ -43,7 +43,7 @@ class RobotManager:
         self._shutdown_event.set()
 
     async def _safe_cleanup(self):
-        if hasattr(self, 'session') and self.session:
+        if hasattr(self, "session") and self.session:
             await self.cleanup()
 
         for thread in self.threads:
@@ -52,30 +52,29 @@ class RobotManager:
 
     def _gat_model_info_from_config(self):
         """Initial model"""
-        for candidate in config["model"]["MODEL_LIST"]:
-            if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
-                model_path=None
-                if candidate["CLOUD_TYPE"] == "azure":
-                    model_client = AzureOpenAIServerModel(
-                        model_id=config["model"]["MODEL_SELECT"],
-                        azure_endpoint=candidate["AZURE_ENDPOINT"],
-                        azure_deployment=candidate["AZURE_DEPLOYMENT"],
-                        api_key=candidate["AZURE_API_KEY"],
-                        api_version=candidate["AZURE_API_VERSION"],
-                    )
-                    model_path=candidate["CLOUD_MODEL"]
-                elif candidate["CLOUD_TYPE"] == "default":
-                    model_client = OpenAIServerModel(
-                        api_key=candidate["CLOUD_API_KEY"],
-                        api_base=candidate["CLOUD_SERVER"],
-                        model_id=candidate["CLOUD_MODEL"],
-                    )
-                    model_path=candidate["CLOUD_MODEL"]
-                else:
-                    raise ValueError(
-                        f"Unsupported cloud type: {candidate['CLOUD_TYPE']}"
-                    )
-                return model_client, model_path
+
+        candidate = config["model"]["MODEL_DICT"]
+        if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
+            if candidate["CLOUD_TYPE"] == "azure":
+                model_client = AzureOpenAIServerModel(
+                    model_id=config["model"]["MODEL_SELECT"],
+                    azure_endpoint=candidate["AZURE_ENDPOINT"],
+                    azure_deployment=candidate["AZURE_DEPLOYMENT"],
+                    api_key=candidate["AZURE_API_KEY"],
+                    api_version=candidate["AZURE_API_VERSION"],
+                )
+                model_name = config["model"]["MODEL_SELECT"]
+            elif candidate["CLOUD_TYPE"] == "default":
+                model_client = OpenAIServerModel(
+                    api_key=candidate["CLOUD_API_KEY"],
+                    api_base=candidate["CLOUD_SERVER"],
+                    model_id=candidate["CLOUD_MODEL"],
+                )
+                model_name = config["model"]["MODEL_SELECT"]
+            else:
+                raise ValueError(f"Unsupported cloud type: {candidate['CLOUD_TYPE']}")
+            return model_client, model_name
+        raise ValueError(f"Unsupported model: {config['model']['MODEL_SELECT']}")
 
     def handle_task(self, data: Dict) -> None:
         """Process incoming tasks with thread-safe operation"""
@@ -89,7 +88,9 @@ class RobotManager:
             "order_flag": data.get("order_flag", "false"),
         }
         with self.lock:
-            future = asyncio.run_coroutine_threadsafe(self._execute_task(task_data), self.loop)
+            future = asyncio.run_coroutine_threadsafe(
+                self._execute_task(task_data), self.loop
+            )
             future.result()
 
     async def _execute_task(self, task_data: Dict) -> None:
@@ -102,14 +103,13 @@ class RobotManager:
             self.communicator.clear(self.robot_name)
         agent = ToolCallingAgent(
             tools=self.tools,
-            tools_path=self.tools_path,
             verbosity_level=2,
             model=self.model,
             model_path=self.model_path,
             log_file="./.log/agent.log",
             robot_name=self.robot_name,
             communicator=self.communicator,
-            tool_executor=self.session.call_tool
+            tool_executor=self.session.call_tool,
         )
         result = await agent.run(task=task_data["task"])
         self._send_result(
@@ -120,7 +120,9 @@ class RobotManager:
             tool_call=agent.tool_call,
         )
 
-    def _send_result(self, robot_name: str, task: str, task_id: str, result: Dict, tool_call: List) -> None:
+    def _send_result(
+        self, robot_name: str, task: str, task_id: str, result: Dict, tool_call: List
+    ) -> None:
         """Send task results to communication channel"""
         if self._shutdown_event.is_set():
             return
@@ -149,13 +151,13 @@ class RobotManager:
 
     async def connect_to_robot(self):
         """Connect to an MCP server"""
-        self.robot_profile = yaml.safe_load(open(config["profile"]["PATH"], 'r', encoding='utf-8'))
+        self.robot_profile = yaml.safe_load(
+            open(config["profile"]["PATH"], "r", encoding="utf-8")
+        )
         robot_tools = self.robot_profile["robot_tools"]
-        self.tools_path = robot_tools
-        robot_tools_mcp = (robot_tools.split('.'))[0]+"_mcp.py"
 
         server_params = StdioServerParameters(
-            command="python", args=[robot_tools_mcp], env=None
+            command="python", args=[robot_tools], env=None
         )
 
         stdio_transport = await self.exit_stack.enter_async_context(

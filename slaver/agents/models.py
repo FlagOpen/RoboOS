@@ -296,12 +296,7 @@ class OpenAIServerModel(Model):
             for current_statu in current_status:
                 content += f"{current_statu} "
         completion_kwargs = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
+            "messages": [{"role": "user", "content": content}],
             "model": model_path,
             "n": 1,
             "temperature": 0.0,
@@ -314,7 +309,7 @@ class OpenAIServerModel(Model):
 
         if tools_to_call_from:
             completion_kwargs["tools"] = tools_to_call_from
-        
+
         print(completion_kwargs)
         response = self.client.chat.completions.create(**completion_kwargs)
         self.last_input_token_count = response.usage.prompt_tokens

@@ -1,10 +1,10 @@
-import yaml
-from typing import List, Dict
+from typing import Dict, List
 
+import yaml
 from prompt.prompts import (
     MASTER_PLANNING_PLANNING,
-    ROBOT_TOOLS_INFO_TEMPLATE,
     ROBOT_POSITION_INFO_TEMPLATE,
+    ROBOT_TOOLS_INFO_TEMPLATE,
     SCENE_OBJECTS_INFO_TEMPLATE,
 )
 
