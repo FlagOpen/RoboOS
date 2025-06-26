@@ -9,7 +9,7 @@ model:
   MODEL_SELECT: "/workspace/model/BAAI/RoboBrain2.0-7B"
   # Number of retries for planning
   MODEL_RETRY_PLANNING: 5
-  MODEL_LIST:
+  MODEL_DICT:
     # Model name for the cloud server
     CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
     # Deploy for the cloud server
