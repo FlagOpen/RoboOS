@@ -1,0 +1,131 @@
+dataset_map_provider_class_type: ???
+data_loader_map_provider_class_type: SequenceDataLoaderMapProvider
+dataset_map_provider_BlenderDatasetMapProvider_args:
+  base_dir: ???
+  object_name: ???
+  path_manager_factory_class_type: PathManagerFactory
+  n_known_frames_for_test: null
+  path_manager_factory_PathManagerFactory_args:
+    silence_logs: true
+dataset_map_provider_JsonIndexDatasetMapProvider_args:
+  category: ???
+  task_str: singlesequence
+  dataset_root: ''
+  n_frames_per_sequence: -1
+  test_on_train: false
+  restrict_sequence_name: []
+  test_restrict_sequence_id: -1
+  assert_single_seq: false
+  only_test_set: false
+  dataset_class_type: JsonIndexDataset
+  path_manager_factory_class_type: PathManagerFactory
+  dataset_JsonIndexDataset_args:
+    limit_to: 0
+    limit_sequences_to: 0
+    exclude_sequence: []
+    limit_category_to: []
+    load_images: true
+    load_depths: true
+    load_depth_masks: true
+    load_masks: true
+    load_point_clouds: false
+    max_points: 0
+    mask_images: false
+    mask_depths: false
+    image_height: 800
+    image_width: 800
+    box_crop: true
+    box_crop_mask_thr: 0.4
+    box_crop_context: 0.3
+    remove_empty_masks: true
+    seed: 0
+    sort_frames: false
+  path_manager_factory_PathManagerFactory_args:
+    silence_logs: true
+dataset_map_provider_JsonIndexDatasetMapProviderV2_args:
+  category: ???
+  subset_name: ???
+  dataset_root: ''
+  test_on_train: false
+  only_test_set: false
+  load_eval_batches: true
+  num_load_workers: 4
+  n_known_frames_for_test: 0
+  dataset_class_type: JsonIndexDataset
+  path_manager_factory_class_type: PathManagerFactory
+  dataset_JsonIndexDataset_args:
+    limit_to: 0
+    limit_sequences_to: 0
+    pick_sequence: []
+    exclude_sequence: []
+    limit_category_to: []
+    load_images: true
+    load_depths: true
+    load_depth_masks: true
+    load_masks: true
+    load_point_clouds: false
+    max_points: 0
+    mask_images: false
+    mask_depths: false
+    image_height: 800
+    image_width: 800
+    box_crop: true
+    box_crop_mask_thr: 0.4
+    box_crop_context: 0.3
+    remove_empty_masks: true
+    n_frames_per_sequence: -1
+    seed: 0
+    sort_frames: false
+  path_manager_factory_PathManagerFactory_args:
+    silence_logs: true
+dataset_map_provider_LlffDatasetMapProvider_args:
+  base_dir: ???
+  object_name: ???
+  path_manager_factory_class_type: PathManagerFactory
+  n_known_frames_for_test: null
+  path_manager_factory_PathManagerFactory_args:
+    silence_logs: true
+  downscale_factor: 4
+dataset_map_provider_RenderedMeshDatasetMapProvider_args:
+  num_views: 40
+  data_file: null
+  azimuth_range: 180.0
+  distance: 2.7
+  resolution: 128
+  use_point_light: true
+  gpu_idx: 0
+  path_manager_factory_class_type: PathManagerFactory
+  path_manager_factory_PathManagerFactory_args:
+    silence_logs: true
+data_loader_map_provider_SequenceDataLoaderMapProvider_args:
+  batch_size: 1
+  num_workers: 0
+  dataset_length_train: 0
+  dataset_length_val: 0
+  dataset_length_test: 0
+  train_conditioning_type: SAME
+  val_conditioning_type: SAME
+  test_conditioning_type: KNOWN
+  images_per_seq_options: []
+  sample_consecutive_frames: false
+  consecutive_frames_max_gap: 0
+  consecutive_frames_max_gap_seconds: 0.1
+data_loader_map_provider_SimpleDataLoaderMapProvider_args:
+  batch_size: 1
+  num_workers: 0
+  dataset_length_train: 0
+  dataset_length_val: 0
+  dataset_length_test: 0
+data_loader_map_provider_TrainEvalDataLoaderMapProvider_args:
+  batch_size: 1
+  num_workers: 0
+  dataset_length_train: 0
+  dataset_length_val: 0
+  dataset_length_test: 0
+  train_conditioning_type: SAME
+  val_conditioning_type: SAME
+  test_conditioning_type: KNOWN
+  images_per_seq_options: []
+  sample_consecutive_frames: false
+  consecutive_frames_max_gap: 0
+  consecutive_frames_max_gap_seconds: 0.1

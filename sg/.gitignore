@@ -1,0 +1,5 @@
+checkpoints
+data_example/
+RenderOption*.json
+scene_graph.json
+temp.json

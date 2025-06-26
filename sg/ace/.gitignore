@@ -1,0 +1,13 @@
+__pycache__/
+.idea/
+
+# Dataset files.
+datasets/7scenes_*
+datasets/12scenes_*
+datasets/Cambridge_*
+datasets/wayspots_*
+datasets/pgt_*
+datasets/visloc_pseudo_gt_limitations
+
+# Outputs.
+output/
