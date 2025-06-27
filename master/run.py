@@ -48,16 +48,13 @@ def robot_status():
         JSON response with robot status
     """
     try:
-        robots = master_agent.communicator.gat_all_values("ROBOT_INFO_*")
-        registered_robots = master_agent.communicator.gat_all_values("ROBOT_REGISTER_*")
+        registered_robots = master_agent.communicator.retrieve_all_agents_name()
+        registered_robots_status = {}
         for registered_robot in registered_robots:
-            robot_name = registered_robot.get("robot_name")
-            registered_robot["robot_state"] = "offline"
-            for robot in robots:
-                if robot.get("robot_name") == robot_name:
-                    registered_robot["robot_state"] = robot.get("robot_state")
-                    break
-        return jsonify(registered_robots), 200
+            registered_robots_status[registered_robot.get("robot_name")] = (
+                registered_robot.get("robot_state")
+            )
+        return jsonify(registered_robots_status), 200
     except Exception as e:
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
 

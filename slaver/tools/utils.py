@@ -19,11 +19,8 @@
 # limitations under the License.
 import ast
 import base64
-import importlib.metadata
-import importlib.util
 import json
 import re
-from functools import lru_cache
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -163,10 +160,4 @@ class Config:
 
 config = Config.load_config()
 
-communicator = Communicator(
-    host=config["communicator"]["HOST"],
-    port=config["communicator"]["PORT"],
-    db=config["communicator"]["DB"],
-    clear=config["communicator"]["CLEAR"],
-    password=config["communicator"]["PASSWORD"],
-)
+communicator = Communicator.from_config(config=config["communicator"])

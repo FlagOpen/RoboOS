@@ -16,30 +16,8 @@ class GlobalAgent:
         """Initialize GlobalAgent"""
         self._init_config(config_path)
         self._init_logger(self.config["logger"])
+        self.communicator = Communicator.from_config(self.config["communicator"])
         self.planner = GlobalTaskPlanner(self.config)
-        self.communicator = Communicator(
-            host=self.config["communicator"]["HOST"],
-            port=self.config["communicator"]["PORT"],
-            db=self.config["communicator"]["DB"],
-            clear=self.config["communicator"]["CLEAR"],
-            password=self.config["communicator"]["PASSWORD"],
-        )
-        # TODO This is only for mocking when ROBOT_PROFILE_ENABLE set 'true', it should be removed in the future
-        for robot_info in self.planner.global_memory["robot_profile"]:
-            robot_name = robot_info["robot_name"]
-            self.communicator.register(
-                f"ROBOT_REGISTER_{robot_name}", json.dumps(robot_info)
-            )
-            self.communicator.register(
-                f"ROBOT_INFO_{robot_name}", json.dumps(robot_info)
-            )
-
-        # TODO This is only for mocking when SCENE_PROFILE_ENABLE set 'true', it should be removed in the future
-        for scene_info in self.planner.global_memory["scene_profile"]:
-            recep_name = scene_info["recep_name"]
-            self.communicator.register(
-                f"SCENE_INFO_{recep_name}", json.dumps(scene_info)
-            )
 
         self.logger.info(f"Configuration loaded from {config_path} ...")
         self.logger.info(f"Master Configuration:\n{self.config}")
@@ -75,15 +53,15 @@ class GlobalAgent:
         with open(config_path, "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
 
-    def _handle_register(self, data: Dict) -> None:
+    def _handle_register(self, robot_name: Dict) -> None:
         """Listen for robot registrations."""
-        self.logger.info("Received registration data:", data)
-        robot_name = data.get("robot_name")
-        self.logger.info(f"robot_registration: {robot_name} \n {json.dumps(data)}")
-        self.communicator.register(f"ROBOT_REGISTER_{robot_name}", json.dumps(data))
+        robot_info = self.communicator.retrieve_agent(robot_name)
+        self.logger.info(
+            f"AGENT_REGISTRATION: {robot_name} \n {json.dumps(robot_info)}"
+        )
 
         # Register functions for processing robot execution results in the brain
-        channel_r2b = f"{robot_name}_to_roboos"
+        channel_r2b = f"{robot_name}_to_RoboOS"
         threading.Thread(
             target=lambda: self.communicator.listen(channel_r2b, self._handle_result),
             daemon=True,
@@ -94,7 +72,9 @@ class GlobalAgent:
             f"RoboOS has listened to [{robot_name}] by channel [{channel_r2b}]"
         )
 
-    def _handle_result(self, data: Dict):
+    def _handle_result(self, data: str):
+        data = json.loads(data)
+
         """Handle results from agents."""
         robot_name = data.get("robot_name")
         subtask_handle = data.get("subtask_handle")
@@ -109,10 +89,7 @@ class GlobalAgent:
             self.logger.info(
                 "===================================================================="
             )
-            self.communicator.register(f"ROBOT_SUBTASK_{robot_name}", json.dumps(data))
-            self.communicator.update_json_field_py(
-                f"ROBOT_INFO_{robot_name}", "robot_state", "idle"
-            )
+            self.communicator.update_agent_busy(robot_name, False)
 
         else:
             self.logger.warning("[WARNING] Received incomplete result data")
@@ -154,68 +131,103 @@ class GlobalAgent:
         """Start listen in a background thread."""
         threading.Thread(
             target=lambda: self.communicator.listen(
-                "robot_registration", self._handle_register
+                "AGENT_REGISTRATION", self._handle_register
             ),
             daemon=True,
         ).start()
         self.logger.info("Started listening for robot registrations...")
 
+    def reasoning_and_subtasks_is_right(self, reasoning_and_subtasks: dict) -> bool:
+        print("R" * 100)
+        print(reasoning_and_subtasks)
+        """
+        Verify if all robots mentioned in the task decomposition exist in the system registry
+
+        Args:
+            reasoning_and_subtasks: Task decomposition dictionary with format:
+                {
+                    "reasoning_explanation": "...",
+                    "subtask_list": [
+                        {"robot_name": "xxx", ...},
+                        {"robot_name": "xxx", ...}
+                    ]
+                }
+
+        Returns:
+            bool: True if all robots are registered, False if any invalid robots found
+        """
+        # Check if input has correct structure
+        if not isinstance(reasoning_and_subtasks, dict):
+            return False
+
+        if "subtask_list" not in reasoning_and_subtasks:
+            return False
+
+        # Extract all unique robot names from subtask_list
+        try:
+            worker_list = {
+                subtask["robot_name"]
+                for subtask in reasoning_and_subtasks["subtask_list"]
+                if isinstance(subtask, dict) and "robot_name" in subtask
+            }
+
+            # Retrieve list of all registered robots from the communicator
+            robots_list = set(self.communicator.retrieve_all_agents_name())
+
+            # Check if all workers are registered
+            return worker_list.issubset(robots_list)
+
+        except (TypeError, KeyError):
+            return False
+
     def publish_global_task(self, task: str, refresh: bool, task_id: str) -> Dict:
         """Publish a global task to all Agents"""
         self.logger.info(f"Publishing global task: {task}")
-        current_scene_info = self.communicator.gat_all_values("SCENE_INFO_*")
-        current_memory = {
-            "scene_profile": current_scene_info,
-        }
-        response = self.planner.forward(task, current_memory)
+
+        response = self.planner.forward(task)
         reasoning_and_subtasks = self._extract_json(response)
 
         # Retry if JSON extraction fails
-        if reasoning_and_subtasks is None:
-            for attempt in range(self.config["model"]["MODEL_RETRY_PLANNING"]):
-                self.logger.warning(
-                    f"Attempt {attempt + 1} to extract JSON failed. Retrying..."
-                )
-                response = self.planner.forward(task, current_memory)
-                reasoning_and_subtasks = self._extract_json(response)
-                if reasoning_and_subtasks is not None:
-                    break
+        attempt = 0
+        while (not self.reasoning_and_subtasks_is_right(reasoning_and_subtasks)) and (
+            attempt < self.config["model"]["MODEL_RETRY_PLANNING"]
+        ):
             self.logger.warning(
                 f"[WARNING] JSON extraction failed after {self.config['model']['MODEL_RETRY_PLANNING']} attempts."
             )
             self.logger.error(
                 f"[ERROR] Task ({task}) failed to be decomposed into subtasks, it will be ignored."
             )
-            return {}
+            self.logger.warning(
+                f"Attempt {attempt + 1} to extract JSON failed. Retrying..."
+            )
+            response = self.planner.forward(task)
+            reasoning_and_subtasks = self._extract_json(response)
+            attempt += 1
 
         self.logger.info(f"Received reasoning and subtasks:\n{reasoning_and_subtasks}")
         subtask_list = reasoning_and_subtasks.get("subtask_list", [])
         grouped_tasks = self._group_tasks_by_order(subtask_list)
+
         task_id = task_id or str(uuid.uuid4()).replace("-", "")
         order_flag = "false" if len(grouped_tasks.keys()) == 1 else "true"
         for task_count, (order, group_task) in enumerate(grouped_tasks.items()):
             self.logger.info(f"Sending task group {order}:\n{group_task}")
+            working_robots = []
             for tasks in group_task:
                 robot_name = tasks.get("robot_name")
                 subtask_data = {
                     "task_id": task_id,
                     "task": tasks["subtask"],
-                    "refresh": refresh,
                     "order": order_flag,
                 }
+                if refresh:
+                    self.communicator.clear_agent_status(robot_name)
                 self.communicator.send(
                     f"roboos_to_{robot_name}", json.dumps(subtask_data)
                 )
-                self.communicator.update_json_field_py(
-                    f"ROBOT_INFO_{robot_name}", "robot_state", "busy"
-                )
-            # wait for all channels response
-            if task_count + 1 < len(grouped_tasks.keys()):
-                channels = [
-                    f"{task.get('robot_name')}_to_roboos" for task in group_task
-                ]
-                self.communicator.wait_for_all_channels_response(
-                    channels=channels, task_id=task_id
-                )
+                working_robots.append(robot_name)
+                self.communicator.update_agent_busy(robot_name, True)
+            self.communicator.wait_agents_free(working_robots)
         self.logger.info(f"Task_id ({task_id}) [{task}] has been sent to all agents.")
         return reasoning_and_subtasks

@@ -290,14 +290,14 @@ class OpenAIServerModel(Model):
     ) -> ChatMessage:
         content = task
         if len(current_status) > 0:
-            content += " Currently completing the following actions: "
-            for current_statu in current_status:
-                content += f"{current_statu} "
+            content += "\n Current Status: "
+            for current_short_statu in current_status:
+                content += f"{current_short_statu} "
         completion_kwargs = {
             "messages": [{"role": "user", "content": content}],
             "model": model_path,
             "n": 1,
-            "temperature": 0.0,
+            "temperature": 0,
             "top_p": 1.0,
             "max_tokens": 8192,
         }
@@ -308,11 +308,9 @@ class OpenAIServerModel(Model):
         if tools_to_call_from:
             completion_kwargs["tools"] = tools_to_call_from
 
-        print(completion_kwargs)
         response = self.client.chat.completions.create(**completion_kwargs)
         self.last_input_token_count = response.usage.prompt_tokens
         self.last_output_token_count = response.usage.completion_tokens
-        print(response)
 
         first_message = ChatMessage.from_dict(
             response.choices[0].message.model_dump(

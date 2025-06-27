@@ -85,6 +85,22 @@ python gradio_ui.py
 # Then, access the web interface at: http://localhost:7861
 ```
 
+### 4. Working with [RoboSkill](https://github.com/phoenixdong/RoboSkill)
+```bash
+# 1. Download Skill Store
+# TODO: Test repo, which will be transferred to [FlagOpen](https://github.com/FlagOpen) organization after finalization
+git clone https://github.com/phoenixdong/RoboSkill
+
+# 2. Modify the configuration file
+slaver/config.yaml
+------------------
+# Robot 
+robot:
+  # Path to the robot fold
+  PATH: "Your robot skills folder"
+------------------
+```
+
 ## ✨ Example Demo
 
 ### 🔍 Master Console
