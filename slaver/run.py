@@ -31,7 +31,6 @@ class RobotManager:
         self._shutdown_event = threading.Event()
         self.model, self.model_path = self._gat_model_info_from_config()
         self.tools = None
-        self.tools_path = None
         self.threads = []
         self.loop = asyncio.get_event_loop()
         self.robot_name = None
@@ -104,7 +103,6 @@ class RobotManager:
         os.makedirs("./.log", exist_ok=True)
         agent = ToolCallingAgent(
             tools=self.tools,
-            tools_path=self.tools_path,
             verbosity_level=2,
             model=self.model,
             model_path=self.model_path,
