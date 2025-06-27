@@ -116,6 +116,7 @@ sudo apt-get install --allow-downgrades \
   librealsense2-dkms=1.3.19-0ubuntu1
 realsense-viewer #testing camera
 
+# if you have trouble with numpy.float, run conda install numpy==1.23.0
 python demo.py \
     --tags "office_test" \
     --scanning_room \
