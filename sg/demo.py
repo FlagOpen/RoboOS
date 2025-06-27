@@ -171,11 +171,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     controller = build_sg(args)
-
-    imagerecorder = RecorderImage(serial_number=args.rs_serial_number)
-    while True:
-        ans = input("Press y to capture the updated scene picture. Press q to quit.")
-        if ans == "y":
-            update_sg(controller, imagerecorder)
-        elif ans == "q":
-            break
+    if not args.scanning_room:
+        imagerecorder = RecorderImage(serial_number=args.rs_serial_number)
+        while True:
+            ans = input("Press y to capture the updated scene picture. Press q to quit.")
+            if ans == "y":
+                update_sg(controller, imagerecorder)
+            elif ans == "q":
+                break
