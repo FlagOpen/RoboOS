@@ -104,7 +104,7 @@ class MultiStepAgent:
             if answer == "final_answer":
                 return "Mission accomplished"
 
-            self.communicator.record(self.robot_name, answer)
+            self.communicator.record_agent_status(self.robot_name, answer)
             step.end_time = time.time()
             self.step_number += 1
 
@@ -170,7 +170,7 @@ class ToolCallingAgent(MultiStepAgent):
         self.logger.log_rule(f"Step {self.step_number}", level=LogLevel.INFO)
 
         # Add new step in logs
-        current_status = self.communicator.read_all(self.robot_name)
+        current_status = self.communicator.read_agent_status(self.robot_name)
         model_message: ChatMessage = self.model(
             task=self.task,
             current_status=current_status,

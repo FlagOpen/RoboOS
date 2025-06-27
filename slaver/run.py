@@ -52,30 +52,28 @@ class RobotManager:
 
     def _gat_model_info_from_config(self):
         """Initial model"""
-        for candidate in config["model"]["MODEL_DICT"]:
-            if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
-                model_path = None
-                if candidate["CLOUD_TYPE"] == "azure":
-                    model_client = AzureOpenAIServerModel(
-                        model_id=config["model"]["MODEL_SELECT"],
-                        azure_endpoint=candidate["AZURE_ENDPOINT"],
-                        azure_deployment=candidate["AZURE_DEPLOYMENT"],
-                        api_key=candidate["AZURE_API_KEY"],
-                        api_version=candidate["AZURE_API_VERSION"],
-                    )
-                    model_path = candidate["CLOUD_MODEL"]
-                elif candidate["CLOUD_TYPE"] == "default":
-                    model_client = OpenAIServerModel(
-                        api_key=candidate["CLOUD_API_KEY"],
-                        api_base=candidate["CLOUD_SERVER"],
-                        model_id=candidate["CLOUD_MODEL"],
-                    )
-                    model_path = candidate["CLOUD_MODEL"]
-                else:
-                    raise ValueError(
-                        f"Unsupported cloud type: {candidate['CLOUD_TYPE']}"
-                    )
-                return model_client, model_path
+        candidate = config["model"]["MODEL_DICT"]
+        if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
+            if candidate["CLOUD_TYPE"] == "azure":
+                model_client = AzureOpenAIServerModel(
+                    model_id=config["model"]["MODEL_SELECT"],
+                    azure_endpoint=candidate["AZURE_ENDPOINT"],
+                    azure_deployment=candidate["AZURE_DEPLOYMENT"],
+                    api_key=candidate["AZURE_API_KEY"],
+                    api_version=candidate["AZURE_API_VERSION"],
+                )
+                model_name = config["model"]["MODEL_SELECT"]
+            elif candidate["CLOUD_TYPE"] == "default":
+                model_client = OpenAIServerModel(
+                    api_key=candidate["CLOUD_API_KEY"],
+                    api_base=candidate["CLOUD_SERVER"],
+                    model_id=candidate["CLOUD_MODEL"],
+                )
+                model_name = config["model"]["MODEL_SELECT"]
+            else:
+                raise ValueError(f"Unsupported cloud type: {candidate['CLOUD_TYPE']}")
+            return model_client, model_name
+        raise ValueError(f"Unsupported model: {config['model']['MODEL_SELECT']}")
 
     def handle_task(self, data: str) -> None:
         """Process incoming tasks with thread-safe operation"""
@@ -143,7 +141,7 @@ class RobotManager:
         key = robot_name
         while not self._shutdown_event.is_set():
             try:
-                self.communicator.set_ttl(key, seconds=60)
+                self.communicator.agent_heartbeat(key, seconds=60)
                 time.sleep(30)
             except Exception as e:
                 if not self._shutdown_event.is_set():
