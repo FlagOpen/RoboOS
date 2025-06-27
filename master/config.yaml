@@ -45,8 +45,8 @@ model:
       MAX_CHAT_MESSAGE: 50
 
 
-# Communicator Parameters
-communicator:
+# Collaborator Parameters
+collaborator:
   # Hostname or IP address of the server
   HOST: "127.0.0.1"
   # Port number of the server

@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from agents.prompts import MASTER_PLANNING_PLANNING
-from flag_scale.flagscale.agent.communication import Communicator
+from flag_scale.flagscale.agent.collaboration import Collaborator
 from openai import AzureOpenAI, OpenAI
 
 
@@ -14,7 +14,7 @@ class GlobalTaskPlanner:
         self,
         config: Union[Dict, str] = None,
     ) -> None:
-        self.communicator = Communicator.from_config(config["communicator"])
+        self.collaborator = Collaborator.from_config(config["collaborator"])
 
         self.global_model: Any
         self.model_name: str
@@ -54,8 +54,8 @@ class GlobalTaskPlanner:
     def forward(self, task: str) -> str:
         """Get the sub-tasks from the task."""
 
-        all_robots_name = self.communicator.retrieve_all_agents_name()
-        all_robots_info = self.communicator.retrieve_all_agents()
+        all_robots_name = self.collaborator.retrieve_all_agents_name()
+        all_robots_info = self.collaborator.retrieve_all_agents()
 
         content = MASTER_PLANNING_PLANNING.format(
             robot_name_list=all_robots_name, robot_tools_info=all_robots_info, task=task

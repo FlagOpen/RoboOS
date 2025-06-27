@@ -146,21 +146,21 @@ def validate_config():
     master_config = data["master_config"]
     with open(master_config, "r", encoding="utf-8") as f:
         data = yaml.load(f)
-    # communicator
-    communicator = data.get("communicator", None)
-    if not communicator:
+    # collaborator
+    collaborator = data.get("collaborator", None)
+    if not collaborator:
         return (
             jsonify(
-                {"success": False, "message": f"Lack of communicator configuration"}
+                {"success": False, "message": f"Lack of collaborator configuration"}
             ),
             400,
         )
     try:
         r = redis.StrictRedis(
-            host=communicator["HOST"],
-            port=communicator["PORT"],
-            password=communicator["PASSWORD"],
-            db=communicator["DB"],
+            host=collaborator["HOST"],
+            port=collaborator["PORT"],
+            password=collaborator["PASSWORD"],
+            db=collaborator["DB"],
             socket_connect_timeout=5,
         )
         r.ping()
@@ -168,7 +168,7 @@ def validate_config():
 
         return (
             jsonify(
-                {"success": False, "message": f"communicator connection failed: {e}"}
+                {"success": False, "message": f"collaborator connection failed: {e}"}
             ),
             400,
         )

@@ -16,16 +16,16 @@ from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from tools.utils import communicator, config
+from tools.utils import collaborator, config
 
 
 class RobotManager:
-    """Centralized robot management system with task handling and communication"""
+    """Centralized robot management system with task handling and collaboration"""
 
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
-        self.communicator = communicator
+        self.collaborator = collaborator
         self.heartbeat_interval = 60
         self.lock = threading.Lock()
         self._shutdown_event = threading.Event()
@@ -106,7 +106,7 @@ class RobotManager:
             model_path=self.model_path,
             log_file="./.log/agent.log",
             robot_name=self.robot_name,
-            communicator=self.communicator,
+            collaborator=self.collaborator,
             tool_executor=self.session.call_tool,
         )
         task = task_data["task"]
@@ -122,7 +122,7 @@ class RobotManager:
     def _send_result(
         self, robot_name: str, task: str, task_id: str, result: Dict, tool_call: List
     ) -> None:
-        """Send task results to communication channel"""
+        """Send task results to collaboration channel"""
         if self._shutdown_event.is_set():
             return
 
@@ -134,14 +134,14 @@ class RobotManager:
             "tools": tool_call,
             "task_id": task_id,
         }
-        self.communicator.send(channel, json.dumps(payload))
+        self.collaborator.send(channel, json.dumps(payload))
 
     def _heartbeat_loop(self, robot_name) -> None:
         """Continuous heartbeat signal emitter"""
         key = robot_name
         while not self._shutdown_event.is_set():
             try:
-                self.communicator.agent_heartbeat(key, seconds=60)
+                self.collaborator.agent_heartbeat(key, seconds=60)
                 time.sleep(30)
             except Exception as e:
                 if not self._shutdown_event.is_set():
@@ -194,7 +194,7 @@ class RobotManager:
         self.robot_profile["robot_state"] = "idle"
         with self.lock:
             # Registration thread
-            self.communicator.register_agent(
+            self.collaborator.register_agent(
                 robot_name, json.dumps(register), expire_second=60
             )
 
@@ -210,7 +210,7 @@ class RobotManager:
             # Command listener thread
             channel_b2r = f"roboos_to_{robot_name}"
             listener_thread = threading.Thread(
-                target=lambda: self.communicator.listen(channel_b2r, self.handle_task),
+                target=lambda: self.collaborator.listen(channel_b2r, self.handle_task),
                 daemon=True,
                 name=channel_b2r,
             )

@@ -8,7 +8,7 @@ from typing import Dict
 
 import yaml
 from agents.planner import GlobalTaskPlanner
-from flag_scale.flagscale.agent.communication import Communicator
+from flag_scale.flagscale.agent.collaboration import Collaborator
 
 
 class GlobalAgent:
@@ -16,7 +16,7 @@ class GlobalAgent:
         """Initialize GlobalAgent"""
         self._init_config(config_path)
         self._init_logger(self.config["logger"])
-        self.communicator = Communicator.from_config(self.config["communicator"])
+        self.collaborator = Collaborator.from_config(self.config["collaborator"])
         self.planner = GlobalTaskPlanner(self.config)
 
         self.logger.info(f"Configuration loaded from {config_path} ...")
@@ -55,7 +55,7 @@ class GlobalAgent:
 
     def _handle_register(self, robot_name: Dict) -> None:
         """Listen for robot registrations."""
-        robot_info = self.communicator.retrieve_agent(robot_name)
+        robot_info = self.collaborator.retrieve_agent(robot_name)
         self.logger.info(
             f"AGENT_REGISTRATION: {robot_name} \n {json.dumps(robot_info)}"
         )
@@ -63,7 +63,7 @@ class GlobalAgent:
         # Register functions for processing robot execution results in the brain
         channel_r2b = f"{robot_name}_to_RoboOS"
         threading.Thread(
-            target=lambda: self.communicator.listen(channel_r2b, self._handle_result),
+            target=lambda: self.collaborator.listen(channel_r2b, self._handle_result),
             daemon=True,
             name=channel_r2b,
         ).start()
@@ -89,7 +89,7 @@ class GlobalAgent:
             self.logger.info(
                 "===================================================================="
             )
-            self.communicator.update_agent_busy(robot_name, False)
+            self.collaborator.update_agent_busy(robot_name, False)
 
         else:
             self.logger.warning("[WARNING] Received incomplete result data")
@@ -130,7 +130,7 @@ class GlobalAgent:
     def _start_listener(self):
         """Start listen in a background thread."""
         threading.Thread(
-            target=lambda: self.communicator.listen(
+            target=lambda: self.collaborator.listen(
                 "AGENT_REGISTRATION", self._handle_register
             ),
             daemon=True,
@@ -169,8 +169,8 @@ class GlobalAgent:
                 if isinstance(subtask, dict) and "robot_name" in subtask
             }
 
-            # Retrieve list of all registered robots from the communicator
-            robots_list = set(self.communicator.retrieve_all_agents_name())
+            # Retrieve list of all registered robots from the collaborator
+            robots_list = set(self.collaborator.retrieve_all_agents_name())
 
             # Check if all workers are registered
             return worker_list.issubset(robots_list)
@@ -220,12 +220,12 @@ class GlobalAgent:
                     "order": order_flag,
                 }
                 if refresh:
-                    self.communicator.clear_agent_status(robot_name)
-                self.communicator.send(
+                    self.collaborator.clear_agent_status(robot_name)
+                self.collaborator.send(
                     f"roboos_to_{robot_name}", json.dumps(subtask_data)
                 )
                 working_robots.append(robot_name)
-                self.communicator.update_agent_busy(robot_name, True)
-            self.communicator.wait_agents_free(working_robots)
+                self.collaborator.update_agent_busy(robot_name, True)
+            self.collaborator.wait_agents_free(working_robots)
         self.logger.info(f"Task_id ({task_id}) [{task}] has been sent to all agents.")
         return reasoning_and_subtasks

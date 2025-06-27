@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from agents.models import ChatMessage
-from flag_scale.flagscale.agent.communication import Communicator
+from flag_scale.flagscale.agent.collaboration import Collaborator
 from mcp import ClientSession
 from rich.panel import Panel
 from rich.text import Text
@@ -33,7 +33,7 @@ class MultiStepAgent:
         tools: List[Dict[str, str]],
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         model_path: str,
-        communicator: Communicator,
+        collaborator: Collaborator,
         tool_executor: ClientSession,
         robot_name: str,
         max_steps: int = 20,
@@ -44,7 +44,7 @@ class MultiStepAgent:
         self.tools = tools
         self.model = model
         self.model_path = model_path
-        self.communicator = communicator
+        self.collaborator = collaborator
         self.robot_name = robot_name
         self.tool_executor = tool_executor
         self.max_steps = max_steps
@@ -104,7 +104,7 @@ class MultiStepAgent:
             if answer == "final_answer":
                 return "Mission accomplished"
 
-            self.communicator.record_agent_status(self.robot_name, answer)
+            self.collaborator.record_agent_status(self.robot_name, answer)
             step.end_time = time.time()
             self.step_number += 1
 
@@ -131,7 +131,7 @@ class ToolCallingAgent(MultiStepAgent):
         tools: List[Dict[str, str]],
         model: Callable[[List[Dict[str, str]]], ChatMessage],
         model_path: str,
-        communicator: Communicator,
+        collaborator: Collaborator,
         robot_name: str,
         **kwargs,
     ):
@@ -140,7 +140,7 @@ class ToolCallingAgent(MultiStepAgent):
             tools=tools,
             model=model,
             model_path=model_path,
-            communicator=communicator,
+            collaborator=collaborator,
             robot_name=robot_name,
             **kwargs,
         )
@@ -170,7 +170,7 @@ class ToolCallingAgent(MultiStepAgent):
         self.logger.log_rule(f"Step {self.step_number}", level=LogLevel.INFO)
 
         # Add new step in logs
-        current_status = self.communicator.read_agent_status(self.robot_name)
+        current_status = self.collaborator.read_agent_status(self.robot_name)
         model_message: ChatMessage = self.model(
             task=self.task,
             current_status=current_status,

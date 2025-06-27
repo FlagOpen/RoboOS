@@ -25,7 +25,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict
 
 import yaml
-from flag_scale.flagscale.agent.communication import Communicator
+from flag_scale.flagscale.agent.collaboration import Collaborator
 
 if TYPE_CHECKING:
     from memory import AgentLogger
@@ -160,4 +160,4 @@ class Config:
 
 config = Config.load_config()
 
-communicator = Communicator.from_config(config=config["communicator"])
+collaborator = Collaborator.from_config(config=config["collaborator"])
