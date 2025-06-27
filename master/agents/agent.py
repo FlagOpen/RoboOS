@@ -138,8 +138,6 @@ class GlobalAgent:
         self.logger.info("Started listening for robot registrations...")
 
     def reasoning_and_subtasks_is_right(self, reasoning_and_subtasks: dict) -> bool:
-        print("R" * 100)
-        print(reasoning_and_subtasks)
         """
         Verify if all robots mentioned in the task decomposition exist in the system registry
 
