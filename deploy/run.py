@@ -1,5 +1,6 @@
-import json
 import os
+import ast
+import json
 import socket
 import subprocess
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import redis
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from ruamel.yaml import YAML
+
 from utils import recursive_update, split_dot_keys
 
 yaml = YAML()
@@ -83,6 +85,7 @@ def saveconfig():
 
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
+
         with open(file_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.load(f)
 
@@ -91,6 +94,7 @@ def saveconfig():
         print(processed_config)
 
         yaml_data = recursive_update(yaml_data, processed_config)
+
 
         with open(file_path, "w", encoding="utf-8") as f:
             yaml.dump(yaml_data, f)
@@ -130,7 +134,12 @@ def validate_config():
             )
 
     # Check if the port is occupied
-    for port in [4567, 5000]:
+    is_flagscale = data.get("is_flagscale", True)
+    serve_port = [5000]
+    if is_flagscale:
+        serve_port.append(4567)
+        
+    for port in serve_port:
         if is_port_in_use(port):
             return (
                 jsonify(
@@ -168,7 +177,7 @@ def validate_config():
 
         return (
             jsonify(
-                {"success": False, "message": f"collaborator connection failed: {e}"}
+                {"success": False, "message": f"communicator connection failed: {e}"}
             ),
             400,
         )
@@ -188,6 +197,14 @@ def start_inference():
 
     conda_env = data.get("conda_env")
     startup_command = data.get("startup_command")
+    is_flagscale = data.get("is_flagscale", True)
+    if not is_flagscale:
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Skip deployment of inference service",
+            }
+        )
 
     if not conda_env or not startup_command:
         return (
@@ -232,17 +249,31 @@ def start_inference():
 @app.route("/api/start-master", methods=["POST"])
 def start_master():
     data = request.json
-
     conda_env = data.get("conda_env")
+    master_config = data.get("master_config")
+    
+    master_path = Path(master_config)
+    pwd = master_path.parent 
+    
     try:
-        bash_command = f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && python run.py"
-
+        bash_command = """
+            if [ -f ~/miniconda3/etc/profile.d/conda.sh ]; then
+                source ~/miniconda3/etc/profile.d/conda.sh
+            elif [ -f ~/anaconda3/etc/profile.d/conda.sh ]; then
+                source ~/anaconda3/etc/profile.d/conda.sh
+            else
+                echo "conda.sh not found!" >&2
+                exit 1
+            fi
+            conda activate {env} && python run.py
+            """.format(env=conda_env).strip()
+            
         with open("master.log", "w") as log:
             subprocess.Popen(
                 ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
-                cwd="/workspace/RoboOS/master",
+                cwd=pwd,
                 preexec_fn=os.setpgrp,
             )
         return jsonify(
@@ -268,15 +299,32 @@ def start_slaver():
     data = request.json
 
     conda_env = data.get("conda_env")
-    try:
-        bash_command = f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && python run.py"
+    
+    slaver_config = data.get("slaver_config")
+    
+    slaver_path = Path(slaver_config)
+    
+    pwd = slaver_path.parent 
 
+    try:
+        bash_command = """
+            if [ -f ~/miniconda3/etc/profile.d/conda.sh ]; then
+                source ~/miniconda3/etc/profile.d/conda.sh
+            elif [ -f ~/anaconda3/etc/profile.d/conda.sh ]; then
+                source ~/anaconda3/etc/profile.d/conda.sh
+            else
+                echo "conda.sh not found!" >&2
+                exit 1
+            fi
+            conda activate {env} && python run.py
+            """.format(env=conda_env).strip()
+            
         with open("slaver.log", "w") as log:
             subprocess.Popen(
                 ["bash", "-c", bash_command],
                 stdout=log,
                 stderr=log,
-                cwd="/workspace/RoboOS/slaver",
+                cwd=pwd,
                 preexec_fn=os.setpgrp,
             )
         return jsonify(
@@ -297,30 +345,66 @@ def start_slaver():
         )
 
 
-@app.route("/api/get_tool_config")
+@app.route("/api/get_tool_config", methods=["POST"])
 def get_tool_config():
+    
+    data = request.json
+    
+    slaver_config = data.get("slaver_config")
+    
+    slaver_path = Path(slaver_config)
+    
+    parent = slaver_path.parent 
+    
     try:
-        return jsonify(
-            {
-                "navigate": {"method": "api", "command": "/api/navigate?target={x}"},
-                "grasp": {
-                    "method": "script",
-                    "command": "python /scripts/grasp.py --object {object}",
-                },
-                "place": {"method": "api", "command": "/api/place?location={location}"},
-            }
-        )
+        tool_path = f"{parent}/robot_tools/skill.py"
+        with open(tool_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        tree = ast.parse(source, filename=tool_path)
+        results = []
+        for node in tree.body:
+            if (isinstance(node, ast.AsyncFunctionDef) or isinstance(node, ast.FunctionDef) ) and node.decorator_list:
+                for deco in node.decorator_list:
+                    if (
+                        isinstance(deco, ast.Call)
+                        and hasattr(deco.func, "attr")
+                        and deco.func.attr == "tool"
+                    ):
+                        func_name = node.name
+                        docstring = ast.get_docstring(node) or ""
+                        parameters = []
+
+                        total_args = len(node.args.args)
+                        defaults = [None] * (total_args - len(node.args.defaults)) + node.args.defaults
+
+                        for arg, default in zip(node.args.args, defaults):
+                            if arg.arg == "self":
+                                continue
+                            arg_type = ast.unparse(arg.annotation) if arg.annotation else "Any"
+                            default_val = ast.unparse(default) if default else None
+
+                            parameters.append({
+                                "name": arg.arg,
+                                "type": arg_type,
+                                "default": default_val
+                            })
+
+                        results.append({
+                            "name": func_name,
+                            "description": docstring.strip(),
+                            "parameters": parameters
+                        })
+        
+        return jsonify({
+            "success": True,
+            "data": results
+        }), 200
     except Exception as e:
-        return (
-            jsonify(
-                {
-                    "navigate": {"method": "api", "command": ""},
-                    "grasp": {"method": "api", "command": ""},
-                    "place": {"method": "api", "command": ""},
-                }
-            ),
-            200,
-        )
+        return jsonify({
+            "success": False,
+            "data": []
+            }),400
 
 
 @app.route("/api/save_tool_config", methods=["POST"])

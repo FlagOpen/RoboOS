@@ -199,7 +199,7 @@
             border-radius: 6px;
             color: var(--text-primary);
             font-family: 'Rajdhani', sans-serif;
-            font-size: 30px; 
+            font-size: 20px; 
             font-weight: bold;  
             transition: all 0.3s ease;
         }
@@ -472,7 +472,7 @@
             background: rgba(0, 240, 255, 0.1);
         }
 
-        .collapse-header h4 {
+        .collapse-header h2 {
             margin: 0;
             color: var(--primary);
         }
@@ -846,7 +846,20 @@
         .btn-primary:hover {
             background: #3ac5d3;
         }
+        .checkbox-inline {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
 
+        .checkbox-inline input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        input:disabled {
+            background-color:rgb(67, 70, 70);;
+            color:rgb(89, 94, 105);
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -869,7 +882,7 @@
 
     <div class="main-content">
         <div class="config-area">
-            <h2><i class="fas fa-cog"></i> Deployment configuration</h2>
+            <h1>Deployment configuration</h1>
             <p class="form-help">Based on the out of the box RoboOS image, achieve one click startup deployment</p>
             
             <div class="deployment-steps">
@@ -896,21 +909,27 @@
             </div>
             <div class="collapse-panel">
                 <div class="collapse-header">
-                    <h4><i class="fas fa-code-branch"></i> Basic Settings</h4>
+                    <h2></i>Basic Settings</h2>
                     <i class="fas fa-chevron-up"></i>
                 </div>
                 <div class="config-card">
-                    <h3><i class="fas fa-server"></i> Conda Environment Selection</h3>
+                    <h3>Conda Environment Selection</h3>
                     <div class="form-group">
                         <label for="conda-env">Startup Command</label>
                         <input type="text" id="conda-env" class="form-control" placeholder="e.g. flagscale-agent" value="flagscale-agent">
                     </div>
                 </div>
                 <div class="config-card">
-                    <h3><i class="fas fa-server"></i> Inference service configuration</h3>
+                    <h3>Inference service configuration</h3>
+                    <div class="form-group checkbox-inline">
+                        <input type="checkbox" id="enable-startup" checked>
+                        <label for="enable-startup">Enable startup command configuration</label>
+                    </div>
                     <div class="form-group">
                         <label for="startup-command">Startup Command</label>
-                        <input type="text" id="startup-command" class="form-control" placeholder="e.g. flagscale serve robobrain" value="flagscale serve robobrain">
+                        <input type="text" id="startup-command" class="form-control" 
+                            placeholder="e.g. flagscale serve robobrain" 
+                            value="flagscale serve robobrain">
                         <p class="form-help">The startup command should match your environment and model configuration</p>
                     </div>
                 </div>
@@ -918,34 +937,34 @@
 
             <div class="collapse-panel active">
                 <div class="collapse-header">
-                    <h4><i class="fas fa-code-branch"></i> Advanced Settings</h4>
+                    <h2>Advanced Settings</h2>
                     <i class="fas fa-chevron-up"></i>
                 </div>
                 <div class="collapse-content">
                     <div class="config-card">
-                        <h3><i class="fas fa-crown"></i> Master node configuration</h3>
+                        <h3>Master node configuration</h3>
                         <div class="form-group">
                             <label for="master-config">Profile Path</label>
                             <input type="text" id="master-config" class="form-control" placeholder="/workspace/RoboOS/master/config.yaml" value="/workspace/RoboOS/master/config.yaml">
                             <p class="form-help">The image has built-in full configuration</p>
                             <button class="btn btn-sm view-config-btn" onclick="viewConfig('master')">
-                                <i class="fas fa-file-code"></i> View/Edit Configuration Files
+                                View/Edit Configuration Files
                             </button>
                         </div>
                     </div>
 
                     <div class="config-card">
-                        <h3><i class="fas fa-microchip"></i> Slaver node configuration</h3>
+                        <h3>Slaver node configuration</h3>
                         <div class="form-group">
                             <label for="slaver-config">Profile Path</label>
                             <input type="text" id="slaver-config" class="form-control" placeholder="/workspace/RoboOS/slaver/config.yaml" value="/workspace/RoboOS/slaver/config.yaml">
                             <p class="form-help">The image has built-in full configuration</p>
                             <div class="button-group">
                                 <button class="btn btn-sm view-config-btn" onclick="viewConfig('slaver')">
-                                    <i class="fas fa-file-code"></i> View/Edit Config
+                                    View/Edit Config
                                 </button>
                                 <button class="btn btn-sm view-config-btn" onclick="showToolConfig()">
-                                    <i class="fas fa-file-code"></i> Robot Tools Config
+                                   Robot Tools Config
                                 </button>
                             </div>
                         </div>
@@ -953,71 +972,19 @@
                     <div id="tool-config-modal" class="config-modal">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h3><i class="fas fa-robot"></i> Robot Tools Configuration</h3>
-                                <span class="close-btn" onclick="closeToolConfig()">&times;</span>
+                            <h3><i class="fas fa-robot"></i>Robot Tools Configuration</h3>
+                            <span class="close-btn" onclick="closeToolConfig()">&times;</span>
                             </div>
                             <div class="modal-body">
-                                <div class="tool-tabs">
-                                    <button class="tab-btn active" data-tab="navigate-tool">Navigate</button>
-                                    <button class="tab-btn" data-tab="grasp-tool">Grasp</button>
-                                    <button class="tab-btn" data-tab="place-tool">Place</button>
-                                </div>
-                                
-                                <div id="navigate-tool" class="tool-tab-content" style="display: block;">
-                                    <div class="form-group">
-                                        <label>Execution Method</label>
-                                        <select class="form-control execution-method" data-tool="navigate">
-                                            <option value="api">API</option>
-                                            <option value="script">Local Script</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Command</label>
-                                        <input type="text" class="form-control command-input" 
-                                            data-tool="navigate" 
-                                            placeholder="e.g. /api/navigate or ./scripts/navigate.sh">
-                                    </div>
-                                </div>
-                                
-                                <div id="grasp-tool" class="tool-tab-content">
-                                    <div class="form-group">
-                                        <label>Execution Method</label>
-                                        <select class="form-control execution-method" data-tool="grasp">
-                                            <option value="api">API</option>
-                                            <option value="script">Local Script</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Command</label>
-                                        <input type="text" class="form-control command-input" 
-                                            data-tool="grasp"
-                                            placeholder="e.g. /api/grasp or ./scripts/grasp.py">
-                                    </div>
-                                </div>
-                                
-                                <div id="place-tool" class="tool-tab-content">
-                                    <div class="form-group">
-                                        <label>Execution Method</label>
-                                        <select class="form-control execution-method" data-tool="place">
-                                            <option value="api">API</option>
-                                            <option value="script">Local Script</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Command</label>
-                                        <input type="text" class="form-control command-input" 
-                                            data-tool="place"
-                                            placeholder="e.g. /api/place or ./scripts/place.py">
-                                    </div>
-                                </div>
+                            <div class="tool-tabs" id="tool-tabs"></div>
+                            <div id="tool-tab-container"></div>
                             </div>
                             <div class="modal-footer">
-                                <button class="btn btn-secondary" onclick="closeToolConfig()">Cancel</button>
-                                <button class="btn btn-primary" onclick="saveToolConfig()">Save Configuration</button>
+                            <button class="btn btn-secondary" onclick="closeToolConfig()">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveToolConfig()">Save Configuration</button>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -1092,7 +1059,9 @@ Waiting for deployment to begin...
             </div>
         </div>
     </div>
-
+    <div id="error-popup" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background-color: #f44336; color: white; padding: 12px 24px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;">
+    </div>
     <script>
 
         let currentEditingConfig = '';
@@ -1107,6 +1076,17 @@ Waiting for deployment to begin...
         };
 
         let toolConfigInitialized = false; 
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const checkbox = document.getElementById("enable-startup");
+            const input = document.getElementById("startup-command");
+
+            input.disabled = !checkbox.checked;
+
+            checkbox.addEventListener("change", function () {
+            input.disabled = !this.checked;
+            });
+        });
 
         function showToolConfig() {
             document.getElementById('tool-config-modal').style.display = 'block';
@@ -1149,20 +1129,31 @@ Waiting for deployment to begin...
             }
         }
         function loadToolConfig() {
-            fetch('/api/get_tool_config')
-                .then(response => response.json())
-                .then(data => {
-                    Object.keys(toolConfigs).forEach(tool => {
-                        if (data[tool]) {
-                            toolConfigs[tool] = data[tool];  
-                            document.querySelector(`.execution-method[data-tool="${tool}"]`).value = data[tool].method;
-                            document.querySelector(`.command-input[data-tool="${tool}"]`).value = data[tool].command;
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Failed to load configuration:', error);
+
+            const deploymentConfig = {
+                    slaver_config: document.getElementById('slaver-config').value,
+                };
+
+            fetch('/api/get_tool_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(deploymentConfig) 
+            })
+            .then(response => response.json())
+            .then(data => {
+                Object.keys(toolConfigs).forEach(tool => {
+                    if (data[tool]) {
+                        toolConfigs[tool] = data[tool];  
+                        document.querySelector(`.execution-method[data-tool="${tool}"]`).value = data[tool].method;
+                        document.querySelector(`.command-input[data-tool="${tool}"]`).value = data[tool].command;
+                    }
                 });
+            })
+            .catch(error => {
+                console.error('Failed to load configuration:', error);
+            });
         }
 
         function saveToolConfig() {
@@ -1342,7 +1333,7 @@ Waiting for deployment to begin...
                 .then(data => {
 
                     if (data.status == 400) {
-                        alert(data.message);
+                        showError(data.message)
                     } else {
                         const configText = jsonToConfigFormat(data.data);
                         content.value = configText;
@@ -1635,7 +1626,8 @@ Waiting for deployment to begin...
                     startup_command: document.getElementById('startup-command').value,
                     conda_env: document.getElementById('conda-env').value,
                     master_config: document.getElementById('master-config').value,
-                    slaver_config: document.getElementById('slaver-config').value
+                    slaver_config: document.getElementById('slaver-config').value,
+                    is_flagscale: document.getElementById('enable-startup').checked
                 };
 
                 appendLog('\n=== Start deployment RoboOS  ===');
@@ -1725,6 +1717,15 @@ Waiting for deployment to begin...
             });
             deploymentStatus.currentStep = 0;
         }
+        function showError(message) {
+            const popup = document.getElementById('error-popup')
+            popup.textContent = message
+            popup.style.display = 'block'
+
+            setTimeout(() => {
+                popup.style.display = 'none'
+            }, 5000) 
+            }
     </script>
 </body>
 </html>
