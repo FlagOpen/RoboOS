@@ -43,3 +43,6 @@ camera:
 robot:
   # Path to the robot fold
   PATH: "demo_robot"
+
+# Output reasoning context, time cost and other information
+profiling: true

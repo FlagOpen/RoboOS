@@ -33,16 +33,16 @@ model:
   # Number of retries for planning
   MODEL_RETRY_PLANNING: 5
   MODEL_DICT:
-      # Model name for the cloud server
-      CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
-      # Deploy for the cloud server
-      CLOUD_TYPE: "default"
-      # API key for the cloud server
-      CLOUD_API_KEY: "EMPTY"
-      # URL of the cloud server
-      CLOUD_SERVER: "http://localhost:4567/v1/"
-      # Maximum number of chat messages to keep in memory
-      MAX_CHAT_MESSAGE: 50
+    # Model name for the cloud server
+    CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
+    # Deploy for the cloud server
+    CLOUD_TYPE: "default"
+    # API key for the cloud server
+    CLOUD_API_KEY: "EMPTY"
+    # URL of the cloud server
+    CLOUD_SERVER: "http://localhost:4567/v1/"
+    # Maximum number of chat messages to keep in memory
+    MAX_CHAT_MESSAGE: 50
 
 
 # Collaborator Parameters
@@ -69,3 +69,6 @@ logger:
   MASTER_LOGGER_FILE: ".logs/master_agent.log"
   # Path to save the robot memory file
   ROBOT_MEMORY_YAML: ".log/robot_memory.yaml"
+
+# Output reasoning context, time cost and other information
+profiling: true

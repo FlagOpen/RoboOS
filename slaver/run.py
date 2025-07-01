@@ -14,9 +14,13 @@ from typing import Dict, List, Optional
 import yaml
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
+from flag_scale.flagscale.agent.Collaboration import Collaborator
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from tools.utils import collaborator, config
+from tools.utils import Config
+
+config = Config.load_config()
+collaborator = Collaborator.from_config(config=config["collaborator"])
 
 
 class RobotManager:
@@ -61,6 +65,8 @@ class RobotManager:
                     azure_deployment=candidate["AZURE_DEPLOYMENT"],
                     api_key=candidate["AZURE_API_KEY"],
                     api_version=candidate["AZURE_API_VERSION"],
+                    support_tool_calls=config["tool"]["SUPPORT_TOOL_CALLS"],
+                    profiling=config["profiling"],
                 )
                 model_name = config["model"]["MODEL_SELECT"]
             elif candidate["CLOUD_TYPE"] == "default":
@@ -68,6 +74,8 @@ class RobotManager:
                     api_key=candidate["CLOUD_API_KEY"],
                     api_base=candidate["CLOUD_SERVER"],
                     model_id=candidate["CLOUD_MODEL"],
+                    support_tool_calls=config["tool"]["SUPPORT_TOOL_CALLS"],
+                    profiling=config["profiling"],
                 )
                 model_name = config["model"]["MODEL_SELECT"]
             else:

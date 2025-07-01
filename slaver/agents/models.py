@@ -23,8 +23,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from tools.utils import config
-
 logger = logging.getLogger(__name__)
 
 
@@ -104,6 +102,8 @@ class Model:
         flatten_messages_as_text: bool = False,
         tool_name_key: str = "name",
         tool_arguments_key: str = "arguments",
+        support_tool_calls: bool = True,
+        profiling: bool = True,
         **kwargs,
     ):
         self.flatten_messages_as_text = flatten_messages_as_text
@@ -112,6 +112,8 @@ class Model:
         self.kwargs = kwargs
         self.last_input_token_count = None
         self.last_output_token_count = None
+        self.support_tool_calls = support_tool_calls
+        self.profiling = profiling
 
     def get_token_counts(self) -> Dict[str, int]:
         return {
@@ -141,6 +143,18 @@ class Model:
             `ChatMessage`: A chat message object containing the model's response.
         """
         pass  # To be implemented in child classes!
+
+    def display_profiling_info(self, description: str, message: any):
+        """
+        Outputs profiling information if profiling is enabled.
+
+        :param message: The content to be printed. Can be of any type.
+        :param description: A brief title or description for the message.
+        """
+        if self.profiling:
+            module_name = "slaver"  # Name of the current module
+            print(f" [{module_name}] {description}:")
+            print(message)
 
     def to_dict(self) -> Dict:
         """
@@ -255,13 +269,18 @@ class OpenAIServerModel(Model):
         client_kwargs: Optional[Dict[str, Any]] = None,
         custom_role_conversions: Optional[Dict[str, str]] = None,
         flatten_messages_as_text: bool = False,
+        profiling: bool = True,
         **kwargs,
     ):
         if importlib.util.find_spec("openai") is None:
             raise ModuleNotFoundError(
                 "Please install 'openai' extra to use OpenAIServerModel: `pip install 'smolagents[openai]'`"
             )
-        super().__init__(flatten_messages_as_text=flatten_messages_as_text, **kwargs)
+        super().__init__(
+            flatten_messages_as_text=flatten_messages_as_text,
+            profiling=profiling,
+            **kwargs,
+        )
         self.model_id = model_id
         self.custom_role_conversions = custom_role_conversions
         self.client_kwargs = client_kwargs or {}
@@ -308,16 +327,29 @@ class OpenAIServerModel(Model):
         if tools_to_call_from:
             completion_kwargs["tools"] = tools_to_call_from
 
+        self.display_profiling_info("completion_kwargs", completion_kwargs)
+        from datetime import datetime
+
+        start_inference = datetime.now()
+
         response = self.client.chat.completions.create(**completion_kwargs)
         self.last_input_token_count = response.usage.prompt_tokens
         self.last_output_token_count = response.usage.completion_tokens
+
+        end_inference = datetime.now()
+        self.display_profiling_info(
+            "inference time",
+            f"inference start:{start_inference} end:{end_inference} during:{end_inference-start_inference}",
+        )
+        self.display_profiling_info("response", response)
+        self.display_profiling_info("response.usage", response.usage)
 
         first_message = ChatMessage.from_dict(
             response.choices[0].message.model_dump(
                 include={"role", "content", "tool_calls"}
             )
         )
-        if config["tool"]["SUPPORT_TOOL_CALLS"] == False:
+        if self.support_tool_calls == False:
             first_message = convert_chat_message(first_message)
         first_message.raw = response
         return first_message

@@ -156,8 +156,3 @@ class Config:
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
         return config
-
-
-config = Config.load_config()
-
-collaborator = Collaborator.from_config(config=config["collaborator"])

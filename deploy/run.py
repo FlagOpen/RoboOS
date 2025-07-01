@@ -1,6 +1,6 @@
-import os
 import ast
 import json
+import os
 import socket
 import subprocess
 from pathlib import Path
@@ -8,7 +8,6 @@ from pathlib import Path
 import redis
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from ruamel.yaml import YAML
-
 from utils import recursive_update, split_dot_keys
 
 yaml = YAML()
@@ -85,7 +84,6 @@ def saveconfig():
 
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
-
         with open(file_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.load(f)
 
@@ -94,7 +92,6 @@ def saveconfig():
         print(processed_config)
 
         yaml_data = recursive_update(yaml_data, processed_config)
-
 
         with open(file_path, "w", encoding="utf-8") as f:
             yaml.dump(yaml_data, f)
@@ -138,7 +135,7 @@ def validate_config():
     serve_port = [5000]
     if is_flagscale:
         serve_port.append(4567)
-        
+
     for port in serve_port:
         if is_port_in_use(port):
             return (
@@ -251,10 +248,10 @@ def start_master():
     data = request.json
     conda_env = data.get("conda_env")
     master_config = data.get("master_config")
-    
+
     master_path = Path(master_config)
-    pwd = master_path.parent 
-    
+    pwd = master_path.parent
+
     try:
         bash_command = """
             if [ -f ~/miniconda3/etc/profile.d/conda.sh ]; then
@@ -266,8 +263,10 @@ def start_master():
                 exit 1
             fi
             conda activate {env} && python run.py
-            """.format(env=conda_env).strip()
-            
+            """.format(
+            env=conda_env
+        ).strip()
+
         with open("master.log", "w") as log:
             subprocess.Popen(
                 ["bash", "-c", bash_command],
@@ -299,12 +298,12 @@ def start_slaver():
     data = request.json
 
     conda_env = data.get("conda_env")
-    
+
     slaver_config = data.get("slaver_config")
-    
+
     slaver_path = Path(slaver_config)
-    
-    pwd = slaver_path.parent 
+
+    pwd = slaver_path.parent
 
     try:
         bash_command = """
@@ -317,8 +316,10 @@ def start_slaver():
                 exit 1
             fi
             conda activate {env} && python run.py
-            """.format(env=conda_env).strip()
-            
+            """.format(
+            env=conda_env
+        ).strip()
+
         with open("slaver.log", "w") as log:
             subprocess.Popen(
                 ["bash", "-c", bash_command],
@@ -347,15 +348,15 @@ def start_slaver():
 
 @app.route("/api/get_tool_config", methods=["POST"])
 def get_tool_config():
-    
+
     data = request.json
-    
+
     slaver_config = data.get("slaver_config")
-    
+
     slaver_path = Path(slaver_config)
-    
-    parent = slaver_path.parent 
-    
+
+    parent = slaver_path.parent
+
     try:
         tool_path = f"{parent}/robot_tools/skill.py"
         with open(tool_path, "r", encoding="utf-8") as f:
@@ -364,7 +365,10 @@ def get_tool_config():
         tree = ast.parse(source, filename=tool_path)
         results = []
         for node in tree.body:
-            if (isinstance(node, ast.AsyncFunctionDef) or isinstance(node, ast.FunctionDef) ) and node.decorator_list:
+            if (
+                isinstance(node, ast.AsyncFunctionDef)
+                or isinstance(node, ast.FunctionDef)
+            ) and node.decorator_list:
                 for deco in node.decorator_list:
                     if (
                         isinstance(deco, ast.Call)
@@ -376,35 +380,37 @@ def get_tool_config():
                         parameters = []
 
                         total_args = len(node.args.args)
-                        defaults = [None] * (total_args - len(node.args.defaults)) + node.args.defaults
+                        defaults = [None] * (
+                            total_args - len(node.args.defaults)
+                        ) + node.args.defaults
 
                         for arg, default in zip(node.args.args, defaults):
                             if arg.arg == "self":
                                 continue
-                            arg_type = ast.unparse(arg.annotation) if arg.annotation else "Any"
+                            arg_type = (
+                                ast.unparse(arg.annotation) if arg.annotation else "Any"
+                            )
                             default_val = ast.unparse(default) if default else None
 
-                            parameters.append({
-                                "name": arg.arg,
-                                "type": arg_type,
-                                "default": default_val
-                            })
+                            parameters.append(
+                                {
+                                    "name": arg.arg,
+                                    "type": arg_type,
+                                    "default": default_val,
+                                }
+                            )
 
-                        results.append({
-                            "name": func_name,
-                            "description": docstring.strip(),
-                            "parameters": parameters
-                        })
-        
-        return jsonify({
-            "success": True,
-            "data": results
-        }), 200
+                        results.append(
+                            {
+                                "name": func_name,
+                                "description": docstring.strip(),
+                                "parameters": parameters,
+                            }
+                        )
+
+        return jsonify({"success": True, "data": results}), 200
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "data": []
-            }),400
+        return jsonify({"success": False, "data": []}), 400
 
 
 @app.route("/api/save_tool_config", methods=["POST"])
