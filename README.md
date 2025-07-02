@@ -88,8 +88,7 @@ python gradio_ui.py
 ### 4. Working with [RoboSkill](https://github.com/phoenixdong/RoboSkill)
 ```bash
 # 1. Download Skill Store
-# TODO: Test repo, which will be transferred to [FlagOpen](https://github.com/FlagOpen) organization after finalization
-git clone https://github.com/phoenixdong/RoboSkill
+git clone https://github.com/FlagOpen/RoboSkill
 
 # 2. Modify the configuration file
 slaver/config.yaml
