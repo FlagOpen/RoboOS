@@ -6,7 +6,7 @@
 RoboOS: A Hierarchical Embodied Framework for Cross-Embodiment and Multi-Agent Collaboration
 
 <p align="center">
-    </a>&nbsp&nbsp⭐️ <a href="">Project (Coming soon)</a></a>&nbsp&nbsp │ &nbsp&nbsp🌎 <a href="">Demo (Coming soon)</a>&nbsp&nbsp │ &nbsp&nbsp📑 <a href="https://arxiv.org/abs/2505.03673">Technical Report</a>&nbsp&nbsp </a>
+    </a>&nbsp&nbsp⭐️ <a href="https://flagopen.github.io/RoboOS/">Project</a></a>&nbsp&nbsp │ &nbsp&nbsp🌎 <a href="https://flagopen.github.io/RoboOS/">Demo</a>&nbsp&nbsp │ &nbsp&nbsp📑 <a href="https://arxiv.org/abs/2505.03673">Technical Report</a>&nbsp&nbsp </a>
 </p>
 
 <p align="center">
