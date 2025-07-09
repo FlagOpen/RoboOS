@@ -1,0 +1,15 @@
+encoder_path: "ace/ace_encoder_pretrained.pt"
+session: ""
+image_resolution: 384
+hypotheses: 64
+threshold: 10.0
+inlieralpha: 100.0
+maxpixelerror: 100.0
+render_visualization: false
+render_target_path: "renderings"
+render_flipped_portrait: false
+render_sparse_queries: false
+render_pose_error_threshold: 20
+render_map_depth_filter: 10
+render_camera_z_offset: 4
+render_frame_skip: 1
