@@ -1,7 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
-mcp = FastMCP(name="roboos", stateless_http=True,  host='0.0.0.0', port=8000)
+mcp = FastMCP(name="robots", stateless_http=True,  host='0.0.0.0', port=8000)
 
 
 @mcp.tool()
