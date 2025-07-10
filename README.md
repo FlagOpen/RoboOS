@@ -96,7 +96,7 @@ slaver/config.yaml
 # Robot 
 robot:
   # Path to the robot fold
-  PATH: "Your robot skills folder"
+  path: "Your robot skills folder"
 ------------------
 ```
 

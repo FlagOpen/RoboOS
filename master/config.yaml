@@ -1,74 +1,72 @@
 # Audio Model Parameters
 audio:
   # Whisper supports 16kHz by default
-  SAMPLE_RATE: 16000
+  sample_rate: 16000
   # Number of audio channels (1 for mono, 2 for stereo)
-  CHANNELS: 1
+  channels: 1
   # Recording duration in seconds
-  DURATION: 5
+  duration: 5
   # Max recording time in seconds
-  EXCEED_TIME: 20
+  exceed_time: 20
   # Silence threshold (lower is more sensitive)
-  THRESHOLD: 2000
+  threshold: 2000
   # Duration of silence to end recording, in seconds
-  SILENCE_DURATION: 5
+  silence_duration: 5
   # Enable audio recording
-  AUDIO_RECORD_ENABLE: false
+  audio_record_enable: false
   # Path to save the recorded audio file
-  AUDIO_FILE_PATH: "./tmp_audio.wav"
+  audio_file_path: "./tmp_audio.wav"
 
 # TTS Speaker Parameters
 tts:
   # Enable TTS speaker
-  TTS_SPEAK_ENABLE: false
+  tts_speak_enable: false
   # Random seed for TTS
-  TTS_RAMDOM_SEED: 1924
+  tts_random_seed: 1924
   # Path to save the TTS output audio file
-  TTS_OUTPUT_FILE: "./tts_audio.wav"
+  tts_output_file: "./tts_audio.wav"
 
 # Cloud Server Infos
 model:
   # Model name for the cloud server
-  MODEL_SELECT: "/workspace/model/BAAI/RoboBrain2.0-7B"
+  model_select: "/workspace/model/BAAI/RoboBrain2.0-7B"
   # Number of retries for planning
-  MODEL_RETRY_PLANNING: 5
-  MODEL_DICT:
+  model_retry_planning: 5
+  model_dict:
     # Model name for the cloud server
-    CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
+    cloud_model: "/workspace/model/BAAI/RoboBrain2.0-7B"
     # Deploy for the cloud server
-    CLOUD_TYPE: "default"
+    cloud_type: "default"
     # API key for the cloud server
-    CLOUD_API_KEY: "EMPTY"
+    cloud_api_key: "EMPTY"
     # URL of the cloud server
-    CLOUD_SERVER: "http://localhost:4567/v1/"
+    cloud_server: "http://localhost:4567/v1/"
     # Maximum number of chat messages to keep in memory
-    MAX_CHAT_MESSAGE: 50
-
+    max_chat_message: 50
 
 # Collaborator Parameters
 collaborator:
   # Hostname or IP address of the server
-  HOST: "127.0.0.1"
+  host: "127.0.0.1"
   # Port number of the server
-  PORT: 6379
+  port: 6379
   # database number
-  DB: 0
+  db: 0
   # Whether clear the database on startup
-  CLEAR: true
+  clear: true
   # Password for server
-  PASSWORD: ""
-
+  password: ""
 
 # Logging Parameters
 logger:
   # Name of the master logger
-  MASTER_LOGGER_NAME: "GlobalAgent"
+  master_logger_name: "GlobalAgent"
   # Log level for task logger
-  MASTER_LOGGER_LEVEL: "DEBUG"
+  master_logger_level: "DEBUG"
   # Path to save the task log file
-  MASTER_LOGGER_FILE: ".logs/master_agent.log"
+  master_logger_file: ".logs/master_agent.log"
   # Path to save the robot memory file
-  ROBOT_MEMORY_YAML: ".log/robot_memory.yaml"
+  robot_memory_yaml: ".log/robot_memory.yaml"
 
 # Output reasoning context, time cost and other information
 profiling: true

@@ -25,22 +25,22 @@ class GlobalAgent:
 
     def _init_logger(self, logger_config):
         """Initialize an independent logger for GlobalAgent"""
-        self.logger = logging.getLogger(logger_config["MASTER_LOGGER_NAME"])
-        logger_file = logger_config["MASTER_LOGGER_FILE"]
+        self.logger = logging.getLogger(logger_config["master_logger_name"])
+        logger_file = logger_config["master_logger_file"]
         os.makedirs(os.path.dirname(logger_file), exist_ok=True)
         file_handler = logging.FileHandler(logger_file)
 
         # Set the logging level
-        if logger_config["MASTER_LOGGER_LEVEL"] == "DEBUG":
+        if logger_config["master_logger_level"] == "DEBUG":
             self.logger.setLevel(logging.DEBUG)
             file_handler.setLevel(logging.DEBUG)
-        elif logger_config["MASTER_LOGGER_LEVEL"] == "INFO":
+        elif logger_config["master_logger_level"] == "INFO":
             self.logger.setLevel(logging.INFO)
             file_handler.setLevel(logging.INFO)
-        elif logger_config["MASTER_LOGGER_LEVEL"] == "WARNING":
+        elif logger_config["master_logger_level"] == "WARNING":
             self.logger.setLevel(logging.WARNING)
             file_handler.setLevel(logging.WARNING)
-        elif logger_config["MASTER_LOGGER_LEVEL"] == "ERROR":
+        elif logger_config["master_logger_level"] == "ERROR":
             self.logger.setLevel(logging.ERROR)
             file_handler.setLevel(logging.ERROR)
 
@@ -188,10 +188,10 @@ class GlobalAgent:
         # Retry if JSON extraction fails
         attempt = 0
         while (not self.reasoning_and_subtasks_is_right(reasoning_and_subtasks)) and (
-            attempt < self.config["model"]["MODEL_RETRY_PLANNING"]
+            attempt < self.config["model"]["model_retry_planning"]
         ):
             self.logger.warning(
-                f"[WARNING] JSON extraction failed after {self.config['model']['MODEL_RETRY_PLANNING']} attempts."
+                f"[WARNING] JSON extraction failed after {self.config['model']['model_retry_planning']} attempts."
             )
             self.logger.error(
                 f"[ERROR] Task ({task}) failed to be decomposed into subtasks, it will be ignored."

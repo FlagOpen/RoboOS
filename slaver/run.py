@@ -15,10 +15,9 @@ import yaml
 from agents.models import AzureOpenAIServerModel, OpenAIServerModel
 from agents.slaver_agent import ToolCallingAgent
 from flag_scale.flagscale.agent.collaboration import Collaborator
-
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
-from mcp import ClientSession
-
 from tools.utils import Config
 
 config = Config.load_config()
@@ -58,32 +57,32 @@ class RobotManager:
 
     def _gat_model_info_from_config(self):
         """Initial model"""
-        candidate = config["model"]["MODEL_DICT"]
-        if candidate["CLOUD_MODEL"] in config["model"]["MODEL_SELECT"]:
-            if candidate["CLOUD_TYPE"] == "azure":
+        candidate = config["model"]["model_dict"]
+        if candidate["cloud_model"] in config["model"]["model_select"]:
+            if candidate["cloud_type"] == "azure":
                 model_client = AzureOpenAIServerModel(
-                    model_id=config["model"]["MODEL_SELECT"],
-                    azure_endpoint=candidate["AZURE_ENDPOINT"],
-                    azure_deployment=candidate["AZURE_DEPLOYMENT"],
-                    api_key=candidate["AZURE_API_KEY"],
-                    api_version=candidate["AZURE_API_VERSION"],
-                    support_tool_calls=config["tool"]["SUPPORT_TOOL_CALLS"],
+                    model_id=config["model"]["model_select"],
+                    azure_endpoint=candidate["azure_endpoint"],
+                    azure_deployment=candidate["azure_deployment"],
+                    api_key=candidate["azure_api_key"],
+                    api_version=candidate["azure_api_version"],
+                    support_tool_calls=config["tool"]["support_tool_calls"],
                     profiling=config["profiling"],
                 )
-                model_name = config["model"]["MODEL_SELECT"]
-            elif candidate["CLOUD_TYPE"] == "default":
+                model_name = config["model"]["model_select"]
+            elif candidate["cloud_type"] == "default":
                 model_client = OpenAIServerModel(
-                    api_key=candidate["CLOUD_API_KEY"],
-                    api_base=candidate["CLOUD_SERVER"],
-                    model_id=candidate["CLOUD_MODEL"],
-                    support_tool_calls=config["tool"]["SUPPORT_TOOL_CALLS"],
+                    api_key=candidate["cloud_api_key"],
+                    api_base=candidate["cloud_server"],
+                    model_id=candidate["cloud_model"],
+                    support_tool_calls=config["tool"]["support_tool_calls"],
                     profiling=config["profiling"],
                 )
-                model_name = config["model"]["MODEL_SELECT"]
+                model_name = config["model"]["model_select"]
             else:
-                raise ValueError(f"Unsupported cloud type: {candidate['CLOUD_TYPE']}")
+                raise ValueError(f"Unsupported cloud type: {candidate['cloud_type']}")
             return model_client, model_name
-        raise ValueError(f"Unsupported model: {config['model']['MODEL_SELECT']}")
+        raise ValueError(f"Unsupported model: {config['model']['model_select']}")
 
     def handle_task(self, data: str) -> None:
         """Process incoming tasks with thread-safe operation"""
@@ -161,10 +160,22 @@ class RobotManager:
     async def connect_to_robot(self):
         """Connect to an MCP server"""
 
-        stdio_transport = await self.exit_stack.enter_async_context(
-            streamablehttp_client(f'{config["mcp"]["URL"]}/mcp')
-        )
-        self.stdio, self.write, _ = stdio_transport
+        call_type = config["robot"]["call_type"]
+
+        if call_type == "local":
+            server_params = StdioServerParameters(
+                command="python", args=[config["robot"]["path"] + "/skill.py"], env=None
+            )
+            mcp_client = stdio_client(server_params)
+
+        if call_type == "remote":
+            mcp_client = streamablehttp_client(config["robot"]["path"])
+
+        stdio_transport = await self.exit_stack.enter_async_context(mcp_client)
+        if call_type == "local":
+            self.stdio, self.write = stdio_transport
+        if call_type == "remote":
+            self.stdio, self.write, _ = stdio_transport
         self.session = await self.exit_stack.enter_async_context(
             ClientSession(self.stdio, self.write)
         )
@@ -187,7 +198,7 @@ class RobotManager:
 
         """Complete robot registration with thread management"""
         self.robot_profile = yaml.safe_load(
-            open(config["robot"]["PATH"] + "/config.yaml", "r", encoding="utf-8")
+            open(config["robot"]["path"] + "/config.yaml", "r", encoding="utf-8")
         )
         robot_name = self.robot_profile["robot_name"]
         self.robot_name = robot_name

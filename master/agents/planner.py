@@ -17,34 +17,34 @@ class GlobalTaskPlanner:
 
         self.global_model: Any
         self.model_name: str
-        self.global_model, self.model_name = self._gat_model_info_from_config(
+        self.global_model, self.model_name = self._get_model_info_from_config(
             config["model"]
         )
 
         self.profiling = config["profiling"]
 
-    def _gat_model_info_from_config(self, config: Dict) -> tuple:
+    def _get_model_info_from_config(self, config: Dict) -> tuple:
         """Get the model info from config."""
-        candidate = config["MODEL_DICT"]
-        if candidate["CLOUD_MODEL"] in config["MODEL_SELECT"]:
-            if candidate["CLOUD_TYPE"] == "azure":
-                model_name = config["MODEL_SELECT"]
+        candidate = config["model_dict"]
+        if candidate["cloud_model"] in config["model_select"]:
+            if candidate["cloud_type"] == "azure":
+                model_name = config["model_select"]
                 model_client = AzureOpenAI(
-                    azure_endpoint=candidate["AZURE_ENDPOINT"],
-                    azure_deployment=candidate["AZURE_DEPLOYMENT"],
-                    api_version=candidate["AZURE_API_VERSION"],
-                    api_key=candidate["AZURE_API_KEY"],
+                    azure_endpoint=candidate["azure_endpoint"],
+                    azure_deployment=candidate["azure_deployment"],
+                    api_version=candidate["azure_api_version"],
+                    api_key=candidate["azure_api_key"],
                 )
-            elif candidate["CLOUD_TYPE"] == "default":
+            elif candidate["cloud_type"] == "default":
                 model_client = OpenAI(
-                    base_url=candidate["CLOUD_SERVER"],
-                    api_key=candidate["CLOUD_API_KEY"],
+                    base_url=candidate["cloud_server"],
+                    api_key=candidate["cloud_api_key"],
                 )
-                model_name = config["MODEL_SELECT"]
+                model_name = config["model_select"]
             else:
-                raise ValueError(f"Unsupported cloud type: {candidate['CLOUD_TYPE']}")
+                raise ValueError(f"Unsupported cloud type: {candidate['cloud_type']}")
             return model_client, model_name
-        raise ValueError(f"Unsupported model: {config['MODEL_SELECT']}")
+        raise ValueError(f"Unsupported model: {config['model_select']}")
 
     def _init_config(self, config_path="config.yaml"):
         """Initialize configuration"""

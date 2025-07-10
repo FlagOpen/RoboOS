@@ -1,6 +1,6 @@
+import json
 import traceback
 
-import json
 import psutil
 from agents.agent import GlobalAgent
 from flask import Flask, jsonify, request
@@ -52,10 +52,12 @@ def robot_status():
         registered_robots = master_agent.collaborator.retrieve_all_agents()
         registered_robots_status = []
         for robot_name, robot_info in registered_robots.items():
-            registered_robots_status.append({
-                "robot_name": robot_name,
-                "robot_state": json.loads(robot_info).get("robot_state")
-            })
+            registered_robots_status.append(
+                {
+                    "robot_name": robot_name,
+                    "robot_state": json.loads(robot_info).get("robot_state"),
+                }
+            )
         return jsonify(registered_robots_status), 200
     except Exception as e:
         return jsonify({"error": "Internal server error", "details": str(e)}), 500

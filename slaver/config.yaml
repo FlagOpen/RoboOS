@@ -1,52 +1,49 @@
-
 tool:
   # Has the model undergone targeted training on tool_calls
-  SUPPORT_TOOL_CALLS: false
+  support_tool_calls: false
 
 # Cloud Server Infos
 model:
   # Model name for the cloud server
-  MODEL_SELECT: "/workspace/model/BAAI/RoboBrain2.0-7B"
+  model_select: "/workspace/model/BAAI/RoboBrain2.0-7B"
   # Number of retries for planning
-  MODEL_RETRY_PLANNING: 5
-  MODEL_DICT:
+  model_retry_planning: 5
+  model_dict:
     # Model name for the cloud server
-    CLOUD_MODEL: "/workspace/model/BAAI/RoboBrain2.0-7B"
+    cloud_model: "/workspace/model/BAAI/RoboBrain2.0-7B"
     # Deploy for the cloud server
-    CLOUD_TYPE: "default"
+    cloud_type: "default"
     # API key for the cloud server
-    CLOUD_API_KEY: "EMPTY"
+    cloud_api_key: "EMPTY"
     # URL of the cloud server
-    CLOUD_SERVER: "http://localhost:4567/v1/"
+    cloud_server: "http://localhost:4567/v1/"
     # Maximum number of chat messages to keep in memory
-    MAX_CHAT_MESSAGE: 50
+    max_chat_message: 50
 
 # Collaborator Parameters
 collaborator:
   # Hostname or IP address of the server
-  HOST: "127.0.0.1"
+  host: "127.0.0.1"
   # Port number of the server
-  PORT: 6379
+  port: 6379
   # database number
-  DB: 0
+  db: 0
   # Whether clear the database on startup
-  CLEAR: false
+  clear: false
   # Password for server
-  PASSWORD: ""
+  password: ""
 
 # Camera Parameters
 camera:
   # Path to save camera images
-  IMAGE_PATH: "images/"
+  image_path: "images/"
 
 # Robot 
 robot:
+  # "local" with a fold name such as "demo_robot" or "remote" with URL such as "http://127.0.0.1:8888"
+  call_type: local
   # Path to the robot fold
-  PATH: "demo_robot"
-
-# mcp
-mcp:
-  URL: "http://127.0.0.1:8888"
+  path: "demo_robot"
 
 # Output reasoning context, time cost and other information
 profiling: true
