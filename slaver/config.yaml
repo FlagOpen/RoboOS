@@ -1,16 +1,16 @@
 tool:
   # Has the model undergone targeted training on tool_calls
-  support_tool_calls: false
+  support_tool_calls: true
 
 # Cloud Server Infos
 model:
   # Model name for the cloud server
-  model_select: "/workspace/model/BAAI/RoboBrain2.0-7B"
+  model_select: "/home/models/Qwen2.5-7B-Instruct"
   # Number of retries for planning
   model_retry_planning: 5
   model_dict:
     # Model name for the cloud server
-    cloud_model: "/workspace/model/BAAI/RoboBrain2.0-7B"
+    cloud_model: "/home/models/Qwen2.5-7B-Instruct"
     # Deploy for the cloud server
     cloud_type: "default"
     # API key for the cloud server
@@ -41,10 +41,11 @@ camera:
 # Robot 
 robot:
   # "local" with a fold name such as "demo_robot"
-  # "remote" with URL such as "http://127.0.0.1:8888", and run the Python script 'skill.py' on the robot itself.
-  call_type: local
-  # Path to the robot fold
-  path: "demo_robot"
+  # "remote" with URL such as "http://127.0.0.1:8000", and run the Python script 'skill.py' on the robot itself.
+  # call_type: local
+  # path: "demo_robot_local"
+  call_type: remote
+  path: "http://127.0.0.1:8000"
 
 # Output reasoning context, time cost and other information
 profiling: true
