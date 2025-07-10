@@ -41,7 +41,7 @@ camera:
 # Robot 
 robot:
   # "local" with a fold name such as "demo_robot"
-  # "remote" with URL such as "http://127.0.0.1:8888", and run the Python script `skill.py` on the robot itself.
+  # "remote" with URL such as "http://127.0.0.1:8888", and run the Python script 'skill.py' on the robot itself.
   call_type: local
   # Path to the robot fold
   path: "demo_robot"
