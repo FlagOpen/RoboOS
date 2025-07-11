@@ -169,7 +169,7 @@ class RobotManager:
             mcp_client = stdio_client(server_params)
 
         if call_type == "remote":
-            mcp_client = streamablehttp_client(config["robot"]["path"])
+            mcp_client = streamablehttp_client(config["robot"]["path"] + "/mcp")
 
         stdio_transport = await self.exit_stack.enter_async_context(mcp_client)
         if call_type == "local":
@@ -197,10 +197,7 @@ class RobotManager:
         print("Connected to robot with tools:", str(self.tools))
 
         """Complete robot registration with thread management"""
-        self.robot_profile = yaml.safe_load(
-            open(config["robot"]["path"] + "/config.yaml", "r", encoding="utf-8")
-        )
-        robot_name = self.robot_profile["robot_name"]
+        robot_name = config["robot"]["name"]
         self.robot_name = robot_name
         register = {
             "robot_name": robot_name,
@@ -208,7 +205,6 @@ class RobotManager:
             "robot_state": "idle",
             "timestamp": int(datetime.now().timestamp()),
         }
-        self.robot_profile["robot_state"] = "idle"
         with self.lock:
             # Registration thread
             self.collaborator.register_agent(

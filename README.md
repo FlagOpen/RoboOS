@@ -92,12 +92,6 @@ git clone https://github.com/FlagOpen/RoboSkill
 
 # 2. Modify the configuration file
 slaver/config.yaml
-------------------
-# Robot 
-robot:
-  # Path to the robot fold
-  path: "Your robot skills folder"
-------------------
 ```
 
 ## ✨ Example Demo

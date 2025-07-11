@@ -5,12 +5,12 @@ tool:
 # Cloud Server Infos
 model:
   # Model name for the cloud server
-  model_select: "/home/models/Qwen2.5-7B-Instruct"
+  model_select: "/workspace/model/BAAI/RoboBrain2.0-7B"
   # Number of retries for planning
   model_retry_planning: 5
   model_dict:
     # Model name for the cloud server
-    cloud_model: "/home/models/Qwen2.5-7B-Instruct"
+    cloud_model: "/workspace/model/BAAI/RoboBrain2.0-7B"
     # Deploy for the cloud server
     cloud_type: "default"
     # API key for the cloud server
@@ -44,6 +44,7 @@ robot:
   # "remote" with URL such as "http://127.0.0.1:8000", and run the Python script 'skill.py' on the robot itself.
   # call_type: local
   # path: "demo_robot_local"
+  name: demo_robot
   call_type: remote
   path: "http://127.0.0.1:8000"
 
