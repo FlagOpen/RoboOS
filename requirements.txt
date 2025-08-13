@@ -43,6 +43,7 @@ mcp==1.10.1
 mdurl==0.1.2
 numpy==2.2.5
 openai==1.75.0
+scikit-learn==1.5.2
 orjson==3.10.16
 packaging==25.0
 pandas==2.2.3

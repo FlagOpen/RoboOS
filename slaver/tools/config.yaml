@@ -1,0 +1,180 @@
+# Configuration file for tools module
+# This file contains configuration parameters for various tools,
+# including embedding, tool selection, and other tool-related settings.
+
+# Embedding configuration for tool selection
+embedding:
+  # Embedding method: "tfidf", "enhanced_tfidf", or "simple"
+  method: "enhanced_tfidf"
+  # Number of top tools to select
+  top_k: 3
+  # Minimum similarity threshold (0.0 to 1.0)
+  similarity_threshold: 0.05
+  # Whether to enable debug logging
+  debug: true
+  # Enable category-based filtering
+  use_category_filtering: true
+  # Minimum number of tools to return
+  min_tools: 2
+  # Maximum number of tools to return
+  max_tools: 8
+  # Weight for tool name matching
+  name_weight: 0.4
+  # Weight for tool description matching
+  description_weight: 0.6
+  # Enable fuzzy matching
+  fuzzy_match: true
+  # Enable synonym matching
+  synonym_match: true
+
+# Tool selection configuration
+tool_selection:
+  # Default number of tools to return when no specific count is requested
+  default_tool_count: 5
+  # Whether to enable caching for tool embeddings
+  enable_caching: true
+  # Cache expiration time in seconds
+  cache_expiration: 3600
+  # Whether to log tool selection decisions
+  log_selection: true
+
+# Category keywords for tool classification
+category_keywords:
+  navigation:
+    - "navigate"
+    - "move"
+    - "go"
+    - "travel"
+    - "position"
+    - "location"
+    - "target"
+    - "destination"
+  manipulation:
+    - "grasp"
+    - "pick"
+    - "place"
+    - "hold"
+    - "carry"
+    - "move"
+    - "rotate"
+    - "apply"
+    - "force"
+  sensing:
+    - "scan"
+    - "detect"
+    - "observe"
+    - "photo"
+    - "image"
+    - "camera"
+    - "vision"
+    - "check"
+    - "status"
+  cleaning:
+    - "clean"
+    - "wipe"
+    - "wash"
+    - "remove"
+    - "dust"
+    - "surface"
+    - "maintenance"
+  organization:
+    - "organize"
+    - "arrange"
+    - "sort"
+    - "categorize"
+    - "group"
+    - "order"
+    - "structure"
+  pose:
+    - "pose"
+    - "position"
+    - "stance"
+    - "posture"
+    - "ready"
+    - "standby"
+    - "set"
+
+# Synonym mappings for better semantic understanding
+synonym_mappings:
+  pick:
+    - "grasp"
+    - "take"
+    - "hold"
+    - "seize"
+  place:
+    - "put"
+    - "set"
+    - "position"
+    - "drop"
+  move:
+    - "navigate"
+    - "go"
+    - "travel"
+    - "walk"
+  scan:
+    - "observe"
+    - "look"
+    - "examine"
+    - "inspect"
+  clean:
+    - "wipe"
+    - "wash"
+    - "clear"
+    - "remove"
+  organize:
+    - "arrange"
+    - "sort"
+    - "order"
+    - "categorize"
+
+# Stop words for keyword extraction
+stop_words:
+  - "the"
+  - "a"
+  - "an"
+  - "and"
+  - "or"
+  - "but"
+  - "in"
+  - "on"
+  - "at"
+  - "to"
+  - "for"
+  - "of"
+  - "with"
+  - "by"
+  - "is"
+  - "are"
+  - "was"
+  - "were"
+  - "be"
+  - "been"
+  - "have"
+  - "has"
+  - "had"
+  - "do"
+  - "does"
+  - "did"
+  - "will"
+  - "would"
+  - "could"
+  - "should"
+  - "may"
+  - "might"
+  - "can"
+  - "this"
+  - "that"
+  - "these"
+  - "those"
+  - "i"
+  - "you"
+  - "he"
+  - "she"
+  - "it"
+  - "we"
+  - "they"
+  - "me"
+  - "him"
+  - "her"
+  - "us"
+  - "them"
