@@ -1,0 +1,59 @@
+package:
+  name: pytorch3d
+  version: "{{ environ.get('BUILD_VERSION') }}"
+
+source:
+ path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
+
+requirements:
+  build:
+    - {{ compiler('c') }} # [win]
+    {{ environ.get('CONDA_CUB_CONSTRAINT') }}
+
+  host:
+    - python
+    {{ environ.get('SETUPTOOLS_CONSTRAINT') }}
+    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+    {{ environ.get('CONDA_PYTORCH_MKL_CONSTRAINT') }}
+    {{ environ.get('CONDA_CUDATOOLKIT_CONSTRAINT') }}
+    {{ environ.get('CONDA_CPUONLY_FEATURE') }}
+
+  run:
+    - python
+    - numpy >=1.11
+    - torchvision >=0.5
+    - iopath
+    {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
+    {{ environ.get('CONDA_CUDATOOLKIT_CONSTRAINT') }}
+
+build:
+  string: py{{py}}_{{ environ['CU_VERSION'] }}_pyt{{ environ['PYTORCH_VERSION_NODOT']}}
+  script: python setup.py install --single-version-externally-managed --record=record.txt # [not win]
+  script_env:
+    - CUDA_HOME
+    - FORCE_CUDA
+    - NVCC_FLAGS
+    - MAX_JOBS
+  features:
+    {{ environ.get('CONDA_CPUONLY_FEATURE') }}
+
+test:
+  imports:
+    - pytorch3d
+  source_files:
+    - tests
+    - docs
+  requires:
+    - imageio
+    - hydra-core
+    - accelerate
+  commands:
+    #pytest .
+    python -m unittest discover -v -s tests -t .
+
+
+about:
+  home: https://github.com/facebookresearch/pytorch3d
+  license: BSD
+  license_file: LICENSE
+  summary: '3d Geometry for pytorch'
