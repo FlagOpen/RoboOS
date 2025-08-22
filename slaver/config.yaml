@@ -1,6 +1,12 @@
 tool:
   # Has the model undergone targeted training on tool_calls
   support_tool_calls: true
+  # Tool matching configuration
+  matching:
+    # Maximum number of tools to match for each task
+    max_tools: 3
+    # Minimum similarity score threshold (0.0 to 1.0)
+    min_similarity: 0.1
 
 # Cloud Server Infos
 model:
