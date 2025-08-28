@@ -70,3 +70,7 @@ logger:
 
 # Output reasoning context, time cost and other information
 profiling: true
+
+# scene profile
+profile:
+  path: ./scene/profile.yaml
