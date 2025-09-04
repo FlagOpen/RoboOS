@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from dataclasses import asdict, dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
@@ -185,4 +186,131 @@ class AgentMemory:
                 )
 
 
-__all__ = ["AgentMemory"]
+class SceneMemory:
+    def __init__(self, collaborator):
+        self.collaborator = collaborator
+
+    def add_object(self, target: str):
+        robot_info = self.collaborator.read_environment("robot")
+        if not robot_info:
+            print("[Error] robot_info not found")
+            return
+
+        position = robot_info.get("position")
+        holding = robot_info.get("holding")
+
+        if holding != target:
+            print(f"[Warning] Robot is not holding '{target}', but holding '{holding}'")
+            return
+
+        scene_obj = self.collaborator.read_environment(position)
+        if not scene_obj:
+            print(f"[Error] Scene object at position '{position}' not found")
+            return
+
+        contains = scene_obj.get("contains", [])
+        if target not in contains:
+            contains.append(target)
+        scene_obj["contains"] = contains
+
+        robot_info["holding"] = None
+
+        self.collaborator.record_environment("robot", json.dumps(robot_info))
+        self.collaborator.record_environment(position, json.dumps(scene_obj))
+
+    def remove_object(self, target: str):
+        robot_info = self.collaborator.read_environment("robot")
+        if not robot_info:
+            print("[Error] robot_info not found")
+            return
+
+        position = robot_info.get("position")
+        scene_obj = self.collaborator.read_environment(position)
+        if not scene_obj:
+            print(f"[Error] Scene object at position '{position}' not found")
+            return
+
+        contains = scene_obj.get("contains", [])
+        if target not in contains:
+            print(f"[Warning] Object '{target}' not found in '{position}'")
+            return
+
+        contains.remove(target)
+        scene_obj["contains"] = contains
+        robot_info["holding"] = target
+
+        self.collaborator.record_environment("robot", json.dumps(robot_info))
+        self.collaborator.record_environment(position, json.dumps(scene_obj))
+
+    def move_to(self, target: str):
+        robot_info = self.collaborator.read_environment("robot")
+        if not robot_info:
+            print("[Error] robot_info not found")
+            return
+
+        robot_info["position"] = target
+        success = self.collaborator.record_environment("robot", json.dumps(robot_info))
+        if not success:
+            print(f"[Error] Failed to update robot position to '{target}'")
+
+    def apply_action(self, action_type: str, args: dict):
+        """
+        Apply scene update based on action_type: 'add_object', 'remove_object', or 'position'
+        """
+        print(f"[Scene Update] Applying `{action_type}` with args {args}")
+        try:
+            if "remove_object" in action_type:
+                target = args.get("object")
+                if target:
+                    self.remove_object(target)
+                else:
+                    print("[Scene Update] Missing `object` for remove_object")
+
+            elif "add_object" in action_type:
+                target = args.get("object")
+                if target:
+                    self.add_object(target)
+                else:
+                    print("[Scene Update] Missing `object` for add_object")
+
+            elif "position" in action_type:
+                target = args.get("target")
+                if target:
+                    self.move_to(target)
+                else:
+                    print("[Scene Update] Missing `target` for position")
+
+            else:
+                print(f"[Scene Update] Unknown action `{action_type}`")
+        except Exception as e:
+            print(f"[Scene Update] Error applying action `{action_type}`: {e}")
+
+    @staticmethod
+    def get_action_type_prompt(memory_input: Dict) -> str:
+        return f"""
+You are a robot task planner responsible for updating a symbolic scene memory.
+
+Each tool the robot calls has a side effect on the world, which can be one of the following **scene-level action types**:
+
+- `add_object`: An object that was previously not in the environment (e.g., held by the robot) is placed back into the environment, like placing an apple into a basket.
+- `remove_object`: An object is taken out of the environment (e.g., from a table) and held by the robot, such as grasping or picking up something.
+- `position`: The environment is not changed; the robot itself may move (e.g., navigation), but no object is added, removed, or moved.
+
+---
+
+Given the following tool execution, predict what scene-level action type this tool represents.
+
+Tool name: {memory_input['tool_name']}
+Arguments: {json.dumps(memory_input['arguments'], ensure_ascii=False)}
+Result: {memory_input['result']}
+
+---
+
+Answer strictly with one of the following:
+[add_object, remove_object, position]
+
+Answer with only one action type from the list above. Do not include any explanation.
+"""
+
+
+__all__ = ["AgentMemory", "SceneMemory"]

@@ -48,7 +48,7 @@ def robot_status():
         JSON response with robot status
     """
     try:
-        registered_robots = master_agent.collaborator.retrieve_all_agents()
+        registered_robots = master_agent.collaborator.read_all_agents_info()
         registered_robots_status = []
         for robot_name, robot_info in registered_robots.items():
             registered_robots_status.append(

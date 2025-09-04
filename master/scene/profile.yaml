@@ -1,0 +1,27 @@
+scene:
+  - name: kitchenTable
+    type: table
+    contains:
+      - apple
+      - pear
+      - banana
+      - knife
+
+  - name: customTable
+    type: table
+    contains:
+      - basket
+      - plate
+      - cup
+
+  - name: servingTable
+    type: table
+    contains:
+      - bowl
+      - fork
+      - spoon
+
+  - name: basket
+    type: container
+    contains:
+      - egg

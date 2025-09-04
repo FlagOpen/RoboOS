@@ -10,7 +10,7 @@ from flag_scale.flagscale.agent.collaboration import Collaborator
 from mcp import ClientSession
 from rich.panel import Panel
 from rich.text import Text
-from tools.memory import ActionStep, AgentMemory
+from tools.memory import ActionStep, AgentMemory, SceneMemory
 from tools.monitoring import AgentLogger, LogLevel, Monitor
 
 logger = getLogger(__name__)
@@ -51,6 +51,7 @@ class MultiStepAgent:
         self.step_number = 0
         self.state = {}
         self.memory = AgentMemory()
+        self.scene = SceneMemory(collaborator)
         self.logger = AgentLogger(level=verbosity_level, log_file=log_file)
         self.monitor = Monitor(self.model, self.logger)
         self.step_callbacks = step_callbacks if step_callbacks is not None else []
@@ -160,7 +161,35 @@ class ToolCallingAgent(MultiStepAgent):
             f"Observations: {observation.replace('[', '|')}",  # escape potential rich-tag-like components
             level=LogLevel.INFO,
         )
+
+        # Construct memory input
+        memory_input = {
+            "tool_name": tool_name,
+            "arguments": tool_arguments,
+            "result": observation,
+        }
+        try:
+            await self.memory_predict(memory_input)
+        except Exception as e:
+            print(f"[Scene Update Error] `{e}`")
+
         return observation
+
+    async def memory_predict(self, memory_input: dict) -> str:
+        """
+        Use the model to predict the scene-level effect of the current tool execution.
+        Possible effects: add_object, remove_object, move_object, position.
+        """
+
+        prompt = self.scene.get_action_type_prompt(memory_input)
+
+        model_message: ChatMessage = self.model(
+            task=prompt, current_status="", model_path=self.model_path
+        )
+
+        action_type = model_message.content.strip().lower()
+
+        self.scene.apply_action(action_type, json.loads(memory_input["arguments"]))
 
     async def step(self, memory_step: ActionStep) -> Union[None, Any]:
         """

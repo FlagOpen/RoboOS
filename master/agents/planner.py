@@ -67,11 +67,12 @@ class GlobalTaskPlanner:
     def forward(self, task: str) -> str:
         """Get the sub-tasks from the task."""
 
-        all_robots_name = self.collaborator.retrieve_all_agents_name()
-        all_robots_info = self.collaborator.retrieve_all_agents()
+        all_robots_name = self.collaborator.read_all_agents_name()
+        all_robots_info = self.collaborator.read_all_agents_info()
+        all_environments_info = self.collaborator.read_environment()
 
         content = MASTER_PLANNING_PLANNING.format(
-            robot_name_list=all_robots_name, robot_tools_info=all_robots_info, task=task
+            robot_name_list=all_robots_name, robot_tools_info=all_robots_info, task=task, scene_info=all_environments_info
         )
 
         messages = [

@@ -202,6 +202,11 @@ class RobotManager:
 
         await self.session.initialize()
 
+        # init robot
+        self.collaborator.record_environment(
+            "robot", json.dumps({"position": None, "holding": None, "status": "idle"})
+        )
+
         # List available tools
         response = await self.session.list_tools()
         self.tools = [

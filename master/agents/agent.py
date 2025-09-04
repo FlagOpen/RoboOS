@@ -22,6 +22,8 @@ class GlobalAgent:
 
         self.logger.info(f"Configuration loaded from {config_path} ...")
         self.logger.info(f"Master Configuration:\n{self.config}")
+
+        self._init_scene(self.config["profile"])
         self._start_listener()
 
     def _init_logger(self, logger_config):
@@ -54,9 +56,26 @@ class GlobalAgent:
         with open(config_path, "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
 
+    def _init_scene(self, scene_config):
+        """Initialize scene object"""
+        path = scene_config["path"]
+        if not os.path.exists(path):
+            self.logger.error(f"Scene config file {path} does not exist.")
+            raise FileNotFoundError(f"Scene config file {path} not found.")
+        with open(path, "r", encoding="utf-8") as f:
+            self.scene = yaml.safe_load(f)
+
+        scenes = self.scene.get("scene", [])
+        for scene_info in scenes:
+            scene_name = scene_info.pop("name", None)
+            if scene_name:
+                self.collaborator.record_environment(scene_name, json.dumps(scene_info))
+            else:
+                print("Warning: Missing 'name' in scene_info:", scene_info)
+
     def _handle_register(self, robot_name: Dict) -> None:
         """Listen for robot registrations."""
-        robot_info = self.collaborator.retrieve_agent(robot_name)
+        robot_info = self.collaborator.read_agent_info(robot_name)
         self.logger.info(
             f"AGENT_REGISTRATION: {robot_name} \n {json.dumps(robot_info)}"
         )
@@ -170,8 +189,8 @@ class GlobalAgent:
                 if isinstance(subtask, dict) and "robot_name" in subtask
             }
 
-            # Retrieve list of all registered robots from the collaborator
-            robots_list = set(self.collaborator.retrieve_all_agents_name())
+            # Read list of all registered robots from the collaborator
+            robots_list = set(self.collaborator.read_all_agents_name())
 
             # Check if all workers are registered
             return worker_list.issubset(robots_list)
