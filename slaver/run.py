@@ -19,6 +19,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from tools.utils import Config
+from tools.tool_matcher import ToolMatcher
 
 config = Config.load_config()
 collaborator = Collaborator.from_config(config=config["collaborator"])
@@ -39,6 +40,12 @@ class RobotManager:
         self.threads = []
         self.loop = asyncio.get_event_loop()
         self.robot_name = None
+        
+        # Initialize tool matcher with configuration
+        self.tool_matcher = ToolMatcher(
+            max_tools=config["tool"]["matching"]["max_tools"],
+            min_similarity=config["tool"]["matching"]["min_similarity"]
+        )
 
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -108,8 +115,21 @@ class RobotManager:
             return
 
         os.makedirs("./.log", exist_ok=True)
+        
+        # Use tool matcher to find relevant tools for the task
+        task = task_data["task"]
+        matched_tools = self.tool_matcher.match_tools(task)
+        
+        # Filter tools based on matching results
+        if matched_tools:
+            matched_tool_names = [tool_name for tool_name, _ in matched_tools]
+            filtered_tools = [tool for tool in self.tools 
+                           if tool.get("function", {}).get("name") in matched_tool_names]
+        else:
+            filtered_tools = self.tools
+        
         agent = ToolCallingAgent(
-            tools=self.tools,
+            tools=filtered_tools,
             verbosity_level=2,
             model=self.model,
             model_path=self.model_path,
@@ -118,7 +138,7 @@ class RobotManager:
             collaborator=self.collaborator,
             tool_executor=self.session.call_tool,
         )
-        task = task_data["task"]
+        
         result = await agent.run(task)
         self._send_result(
             robot_name=self.robot_name,
@@ -200,6 +220,9 @@ class RobotManager:
             for tool in response.tools
         ]
         print("Connected to robot with tools:", str(self.tools))
+        
+        # Train the tool matcher with the available tools
+        self.tool_matcher.fit(self.tools)
 
         """Complete robot registration with thread management"""
         robot_name = config["robot"]["name"]
