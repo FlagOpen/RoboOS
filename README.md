@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/flagopen-roboos-badge.png)](https://mseep.ai/app/flagopen-roboos)
+
 <div align="center">
 <img src="./assets/logo2.png" width="200"/>
 </div>
