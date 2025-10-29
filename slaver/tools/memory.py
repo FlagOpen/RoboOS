@@ -13,17 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import time
+from collections import deque
 from dataclasses import asdict, dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
-from agents.models import ChatMessage, MessageRole
-from tools.monitoring import AgentLogger, LogLevel
-from tools.utils import AgentError, make_json_serializable
+from slaver.agents.models import ChatMessage, MessageRole
+from slaver.tools.monitoring import AgentLogger, LogLevel
+from slaver.tools.utils import AgentError, make_json_serializable
 
 if TYPE_CHECKING:
-    from agents.models import ChatMessage
-    from tools.monitoring import AgentLogger
+    from slaver.agents.models import ChatMessage
+    from slaver.tools.monitoring import AgentLogger
 
 
 logger = getLogger(__name__)
@@ -187,25 +189,29 @@ class AgentMemory:
 
 
 class SceneMemory:
-    def __init__(self, collaborator):
+    def __init__(self, collaborator, logger=None):
         self.collaborator = collaborator
+        self.logger = logger
 
     def add_object(self, target: str):
         robot_info = self.collaborator.read_environment("robot")
         if not robot_info:
-            print("[Error] robot_info not found")
+            if self.logger:
+                self.logger.log("robot_info not found", LogLevel.ERROR)
             return
 
         position = robot_info.get("position")
         holding = robot_info.get("holding")
 
         if holding != target:
-            print(f"[Warning] Robot is not holding '{target}', but holding '{holding}'")
+            if self.logger:
+                self.logger.log(f"Robot is not holding '{target}', but holding '{holding}'", LogLevel.WARNING)
             return
 
         scene_obj = self.collaborator.read_environment(position)
         if not scene_obj:
-            print(f"[Error] Scene object at position '{position}' not found")
+            if self.logger:
+                self.logger.log(f"Scene object at position '{position}' not found", LogLevel.ERROR)
             return
 
         contains = scene_obj.get("contains", [])
@@ -221,18 +227,17 @@ class SceneMemory:
     def remove_object(self, target: str):
         robot_info = self.collaborator.read_environment("robot")
         if not robot_info:
-            print("[Error] robot_info not found")
             return
 
         position = robot_info.get("position")
+        holding_before = robot_info.get("holding")
+
         scene_obj = self.collaborator.read_environment(position)
         if not scene_obj:
-            print(f"[Error] Scene object at position '{position}' not found")
             return
 
         contains = scene_obj.get("contains", [])
         if target not in contains:
-            print(f"[Warning] Object '{target}' not found in '{position}'")
             return
 
         contains.remove(target)
@@ -245,45 +250,32 @@ class SceneMemory:
     def move_to(self, target: str):
         robot_info = self.collaborator.read_environment("robot")
         if not robot_info:
-            print("[Error] robot_info not found")
             return
 
         robot_info["position"] = target
-        success = self.collaborator.record_environment("robot", json.dumps(robot_info))
-        if not success:
-            print(f"[Error] Failed to update robot position to '{target}'")
+        self.collaborator.record_environment("robot", json.dumps(robot_info))
 
     def apply_action(self, action_type: str, args: dict):
         """
         Apply scene update based on action_type: 'add_object', 'remove_object', or 'position'
         """
-        print(f"[Scene Update] Applying `{action_type}` with args {args}")
         try:
             if "remove_object" in action_type:
                 target = args.get("object")
                 if target:
                     self.remove_object(target)
-                else:
-                    print("[Scene Update] Missing `object` for remove_object")
 
             elif "add_object" in action_type:
                 target = args.get("object")
                 if target:
                     self.add_object(target)
-                else:
-                    print("[Scene Update] Missing `object` for add_object")
 
             elif "position" in action_type:
                 target = args.get("target")
                 if target:
                     self.move_to(target)
-                else:
-                    print("[Scene Update] Missing `target` for position")
-
-            else:
-                print(f"[Scene Update] Unknown action `{action_type}`")
-        except Exception as e:
-            print(f"[Scene Update] Error applying action `{action_type}`: {e}")
+        except Exception:
+            pass
 
     @staticmethod
     def get_action_type_prompt(memory_input: Dict) -> str:
@@ -313,4 +305,153 @@ Answer with only one action type from the list above. Do not include any explana
 """
 
 
-__all__ = ["AgentMemory", "SceneMemory"]
+@dataclass
+class CompactActionStep:
+    """Compact action step record without LLM interaction redundancy
+
+    Compared to the full ActionStep, only keeps core execution information:
+    - Tool name and arguments
+    - Execution result (truncated to 200 characters)
+    - Success/failure status
+    - Timestamp information
+
+    Removed redundancy:
+    - model_input_messages (LLM input prompt)
+    - model_output_message (LLM raw output)
+    - model_output (LLM output text)
+    """
+    step_number: int
+    timestamp: float
+    tool_name: str
+    tool_arguments: dict
+    tool_result_summary: str
+    success: bool
+    duration: float
+    error_msg: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "step": self.step_number,
+            "timestamp": self.timestamp,
+            "tool": self.tool_name,
+            "args": self.tool_arguments,
+            "result": self.tool_result_summary,
+            "success": self.success,
+            "duration": self.duration,
+            "error": self.error_msg
+        }
+
+
+@dataclass
+class TaskContext:
+    """Task context as a replacement for heavy AgentMemory
+
+    Manages execution context for a single task, including:
+    - Basic task information
+    - Action sequence (list of CompactActionStep)
+    - Execution time and results
+    """
+    task_id: str
+    task_text: str
+    start_time: float
+    actions: List[CompactActionStep]
+    end_time: Optional[float] = None
+    success: Optional[bool] = None
+
+    def get_tool_sequence(self) -> List[str]:
+        """Get tool call sequence"""
+        return [action.tool_name for action in self.actions]
+
+    def get_recent_actions(self, n: int = 5) -> List[CompactActionStep]:
+        """Get recent N actions"""
+        return self.actions[-n:] if len(self.actions) > n else self.actions
+
+
+class ShortTermMemory:
+    """Short-term memory with sliding window management
+
+    Uses deque to implement a fixed-capacity sliding window that
+    automatically evicts old task contexts. Only keeps recently
+    executed tasks for controlled memory usage.
+    """
+
+    def __init__(self, capacity: int = 20):
+        """Initialize short-term memory
+
+        Args:
+            capacity: Maximum number of task contexts to keep
+        """
+        self.capacity = capacity
+        self.current_context: Optional[TaskContext] = None
+        self.recent_contexts: deque = deque(maxlen=capacity)
+
+    def start_task(self, task_id: str, task_text: str):
+        """Start a new task
+
+        If there is a current task, save it to history before starting a new one
+
+        Args:
+            task_id: Task ID
+            task_text: Task description
+        """
+        if self.current_context:
+            self.recent_contexts.append(self.current_context)
+
+        self.current_context = TaskContext(
+            task_id=task_id,
+            task_text=task_text,
+            start_time=time.time(),
+            actions=[]
+        )
+
+    def add_action(self, step_number: int, tool_name: str,
+                   tool_arguments: dict, tool_result: str,
+                   success: bool, duration: float, error_msg: str = None):
+        """Record action execution
+
+        Args:
+            step_number: Step number
+            tool_name: Tool name
+            tool_arguments: Tool arguments
+            tool_result: Tool result (will be truncated to 200 characters)
+            success: Whether succeeded
+            duration: Execution duration
+            error_msg: Error message if any
+        """
+        if not self.current_context:
+            return
+
+        result_summary = tool_result[:200] if tool_result else ""
+
+        action = CompactActionStep(
+            step_number=step_number,
+            timestamp=time.time(),
+            tool_name=tool_name,
+            tool_arguments=tool_arguments,
+            tool_result_summary=result_summary,
+            success=success,
+            duration=duration,
+            error_msg=error_msg
+        )
+
+        self.current_context.actions.append(action)
+
+    def end_task(self, success: bool):
+        """End current task
+
+        Args:
+            success: Whether the task succeeded
+        """
+        if self.current_context:
+            self.current_context.end_time = time.time()
+            self.current_context.success = success
+            self.recent_contexts.append(self.current_context)
+            self.current_context = None
+
+    def reset(self):
+        """Reset all memory"""
+        self.current_context = None
+        self.recent_contexts.clear()
+
+
+__all__ = ["AgentMemory", "SceneMemory", "CompactActionStep", "TaskContext", "ShortTermMemory"]

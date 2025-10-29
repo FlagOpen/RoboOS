@@ -92,7 +92,7 @@ def publish_task():
             if not isinstance(task, str):
                 return jsonify({"error": "Invalid task format - must be a string"}), 400
             subtask_list = master_agent.publish_global_task(
-                data["task"], data["refresh"], task_id
+                task, data["refresh"], task_id
             )
 
         return (

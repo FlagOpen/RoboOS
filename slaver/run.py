@@ -8,18 +8,23 @@ import sys
 import threading
 import time
 from contextlib import AsyncExitStack
+import logging
+logger = logging.getLogger("SlaverRun")
 from datetime import datetime
 from typing import Dict, List, Optional
 
 import yaml
-from agents.models import AzureOpenAIServerModel, OpenAIServerModel
-from agents.slaver_agent import ToolCallingAgent
-from flag_scale.flagscale.agent.collaboration import Collaborator
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamablehttp_client
-from tools.utils import Config
-from tools.tool_matcher import ToolMatcher
+from mcp.client.streamablehttp import streamablehttp_client
+
+from slaver.agents.models import AzureOpenAIServerModel, OpenAIServerModel
+from slaver.agents.slaver_agent import ToolCallingAgent
+from slaver.tools.utils import Config
+from slaver.tools.tool_matcher import ToolMatcher
+
+# Import flagscale last to avoid path conflicts
+from flag_scale.flagscale.agent.collaboration import Collaborator
 
 config = Config.load_config()
 collaborator = Collaborator.from_config(config=config["collaborator"])
@@ -40,7 +45,7 @@ class RobotManager:
         self.threads = []
         self.loop = asyncio.get_event_loop()
         self.robot_name = None
-        
+
         # Initialize tool matcher with configuration
         self.tool_matcher = ToolMatcher(
             max_tools=config["tool"]["matching"]["max_tools"],
@@ -51,7 +56,7 @@ class RobotManager:
         signal.signal(signal.SIGTERM, self._handle_signal)
 
     def _handle_signal(self, signum, frame):
-        print(f"Received signal {signum}, shutting down...")
+        logger.info(f"Received signal {signum}, shutting down...")
         self._shutdown_event.set()
 
     async def _safe_cleanup(self):
@@ -115,19 +120,19 @@ class RobotManager:
             return
 
         os.makedirs("./.log", exist_ok=True)
-        
+
         # Use tool matcher to find relevant tools for the task
         task = task_data["task"]
         matched_tools = self.tool_matcher.match_tools(task)
-        
+
         # Filter tools based on matching results
         if matched_tools:
             matched_tool_names = [tool_name for tool_name, _ in matched_tools]
-            filtered_tools = [tool for tool in self.tools 
+            filtered_tools = [tool for tool in self.tools
                            if tool.get("function", {}).get("name") in matched_tool_names]
         else:
             filtered_tools = self.tools
-        
+
         agent = ToolCallingAgent(
             tools=filtered_tools,
             verbosity_level=2,
@@ -138,8 +143,12 @@ class RobotManager:
             collaborator=self.collaborator,
             tool_executor=self.session.call_tool,
         )
-        
-        result = await agent.run(task)
+
+        # Pass task_id to agent
+        agent.task_id = task_data["task_id"]
+        # Create full task description with task_id
+        full_task = f"{task_data['task_id']}:{task}"
+        result = await agent.run(full_task)
         self._send_result(
             robot_name=self.robot_name,
             task=task,
@@ -174,7 +183,7 @@ class RobotManager:
                 time.sleep(30)
             except Exception as e:
                 if not self._shutdown_event.is_set():
-                    print(f"Heartbeat error: {e}")
+                    logger.warning(f"Heartbeat error: {e}")
                 break
 
     async def connect_to_robot(self):
@@ -219,8 +228,8 @@ class RobotManager:
             }
             for tool in response.tools
         ]
-        print("Connected to robot with tools:", str(self.tools))
-        
+        logger.info("Connected to robot with tools: %s", str(self.tools))
+
         # Train the tool matcher with the available tools
         self.tool_matcher.fit(self.tools)
 
@@ -267,22 +276,22 @@ class RobotManager:
 async def main():
     robot_manager = RobotManager()
     try:
-        print("connecting to robot...")
+        logger.info("connecting to robot...")
         await robot_manager.connect_to_robot()
-        print("connection success")
+        logger.info("connection success")
 
         while not robot_manager._shutdown_event.is_set():
             await asyncio.sleep(1)
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
     finally:
         await robot_manager._safe_cleanup()
-        print("Cleanup completed")
+        logger.info("Cleanup completed")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Program terminated by user")
+        logger.info("Program terminated by user")
         sys.exit(0)
