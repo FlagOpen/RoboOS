@@ -16,12 +16,12 @@ from typing import Dict, List, Optional
 import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamablehttp import streamablehttp_client
+from mcp.client.streamable_http import streamablehttp_client
 
-from slaver.agents.models import AzureOpenAIServerModel, OpenAIServerModel
-from slaver.agents.slaver_agent import ToolCallingAgent
-from slaver.tools.utils import Config
-from slaver.tools.tool_matcher import ToolMatcher
+from agents.models import AzureOpenAIServerModel, OpenAIServerModel
+from agents.slaver_agent import ToolCallingAgent
+from tools.utils import Config
+from tools.tool_matcher import ToolMatcher
 
 # Import flagscale last to avoid path conflicts
 from flag_scale.flagscale.agent.collaboration import Collaborator

@@ -19,13 +19,13 @@ from dataclasses import asdict, dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
-from slaver.agents.models import ChatMessage, MessageRole
-from slaver.tools.monitoring import AgentLogger, LogLevel
-from slaver.tools.utils import AgentError, make_json_serializable
+from agents.models import ChatMessage, MessageRole
+from tools.monitoring import AgentLogger, LogLevel
+from tools.utils import AgentError, make_json_serializable
 
 if TYPE_CHECKING:
-    from slaver.agents.models import ChatMessage
-    from slaver.tools.monitoring import AgentLogger
+    from agents.models import ChatMessage
+    from tools.monitoring import AgentLogger
 
 
 logger = getLogger(__name__)

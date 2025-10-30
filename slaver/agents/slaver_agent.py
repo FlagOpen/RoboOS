@@ -8,15 +8,15 @@ from datetime import datetime
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from slaver.agents.models import ChatMessage
+from agents.models import ChatMessage
 from mcp import ClientSession
 from rich.panel import Panel
 from rich.text import Text
 
-from slaver.tools.agent_status_manager import AgentStatusManager
-from slaver.tools.long_term_memory import LongTermMemory
-from slaver.tools.memory import ActionStep, AgentMemory, SceneMemory, ShortTermMemory
-from slaver.tools.monitoring import AgentLogger, LogLevel, Monitor
+from tools.agent_status_manager import AgentStatusManager
+from tools.long_term_memory import LongTermMemory
+from tools.memory import ActionStep, AgentMemory, SceneMemory, ShortTermMemory
+from tools.monitoring import AgentLogger, LogLevel, Monitor
 
 # Import flagscale last to avoid path conflicts
 from flag_scale.flagscale.agent.collaboration import Collaborator

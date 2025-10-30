@@ -263,7 +263,7 @@ class GlobalAgent:
             _slaver_path = os.path.join(os.path.dirname(__file__), '..', '..', 'slaver')
             sys.path.insert(0, _slaver_path)
             try:
-            from tools.memory import TaskContext, CompactActionStep
+                from tools.memory import TaskContext, CompactActionStep
             except ImportError:
                 # Fallback to direct file loading
                 _memory_file = os.path.join(_slaver_path, 'tools', 'memory.py')
