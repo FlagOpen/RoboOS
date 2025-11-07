@@ -834,10 +834,12 @@ class ApiModel(Model):
     ) -> ChatMessage:
         """Sometimes APIs fail to properly parse a tool call: this function tries to parse."""
         message.role = MessageRole.ASSISTANT  # Overwrite role if needed
-        for tool_call in message.tool_calls:
-            tool_call.function.arguments = parse_json_if_needed(
-                tool_call.function.arguments
-            )
+        # 修复：添加对tool_calls为None的检查
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                tool_call.function.arguments = parse_json_if_needed(
+                    tool_call.function.arguments
+                )
         return message
 
 

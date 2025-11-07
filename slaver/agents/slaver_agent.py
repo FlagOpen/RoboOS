@@ -8,6 +8,7 @@ import re
 import tempfile
 import textwrap
 import time
+import uuid
 from collections import deque
 from logging import getLogger
 from pathlib import Path
@@ -1174,7 +1175,12 @@ class ToolCallingAgent(MultiStepAgent):
             tool_json = self._extract_json(final_answer)
             if tool_json:
                 tool_name, tool_arguments = tool_json["name"], tool_json["arguments"]
-                tool_call_id = model_message.raw.id 
+                # 修复：添加对model_message.raw和model_message.raw.id的空值检查
+                if model_message.raw and hasattr(model_message.raw, 'id') and model_message.raw.id:
+                    tool_call_id = model_message.raw.id
+                else:
+                    # 如果无法获取id，则生成一个唯一的ID
+                    tool_call_id = str(uuid.uuid4())
             else:
                 memory_step.action_output = final_answer
                 return final_answer
