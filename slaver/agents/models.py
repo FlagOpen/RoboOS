@@ -25,6 +25,31 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Slaver prompt template configuration
+SLAVER_PROMPT_TEMPLATE = """Rules:
+- Only call a tool IF AND ONLY IF the action is required by the task AND has NOT already been completed.
+- Do NOT call the same tool multiple times for the same object/location.
+- Do NOT make assumptions beyond the task description.
+
+- **CRITICAL: ONLY execute tasks that can be performed with available robot tools**
+- **SKIP executing tasks that require tools not available to the robot**
+- **SKIP executing tasks that require human intervention or external systems**
+- **If a task cannot be executed with available tools, just do nothing**
+- **AVOID redundant tool calls - each action should be performed only once**
+
+Task: {task}
+{robot_info}
+{completed_actions}
+
+"""
+
+# Optional additional rules template
+SLAVER_ADDITIONAL_RULES = {
+    "spatial_awareness": "- **SPATIAL AWARENESS: Consider robot's current position and target location before planning actions**",
+    "tool_efficiency": "- **TOOL EFFICIENCY: Use the most direct tool for the task (e.g., place_to_affordance instead of navigate + place)**",
+    "error_handling": "- **ERROR HANDLING: If a task cannot be completed, clearly state why and do not attempt impossible actions**"
+}
+
 
 @dataclass
 class ChatMessageToolCallDefinition:
@@ -306,20 +331,35 @@ class OpenAIServerModel(Model):
         model_path: str,
         stop_sequences: Optional[List[str]] = None,
         tools_to_call_from: Optional[List[str]] = None,
+        scene_info: Optional[dict] = None,
+        additional_rules: Optional[List[str]] = None,
     ) -> ChatMessage:
 
-        content = (
-            "Rules:\n"
-            "- Only call a tool IF AND ONLY IF the action is required by the task AND has NOT already been completed.\n"
-            "- Do NOT call the same tool multiple times for the same object/location.\n"
-            "- Do NOT make assumptions beyond the task description.\n\n"
+        robot_info = ""
+        if scene_info and 'robot' in scene_info:
+            robot_info = scene_info['robot']
+            robot_info = f"Your current position: {robot_info.get('position', 'unknown')}\nCurrent holding: {robot_info.get('holding', 'nothing')}\n"
+
+        completed_actions = ""
+        if len(current_status) > 0:
+            completed_actions = "Completed Actions:\n"
+            for current_short_statu in current_status:
+                completed_actions += f"- {current_short_statu}\n"
+
+        extra_rules = ""
+        if additional_rules:
+            for rule_key in additional_rules:
+                if rule_key in SLAVER_ADDITIONAL_RULES:
+                    extra_rules += SLAVER_ADDITIONAL_RULES[rule_key] + "\n"
+
+        content = SLAVER_PROMPT_TEMPLATE.format(
+            task=task,
+            robot_info=robot_info,
+            completed_actions=completed_actions
         )
 
-        content += f"Task: {task}\n\n"
-        if len(current_status) > 0:
-            content += "Completed Actions:\n"
-            for current_short_statu in current_status:
-                content += f"- {current_short_statu}\n"
+        if extra_rules:
+            content = content.replace("Task:", f"{extra_rules}\nTask:")
         completion_kwargs = {
             "messages": [{"role": "user", "content": content}],
             "model": model_path,

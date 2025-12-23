@@ -1,6 +1,6 @@
 tool:
   # Has the model undergone targeted training on tool_calls
-  support_tool_calls: false
+  support_tool_calls: true
   # Tool matching configuration
   matching:
     # Maximum number of tools to match for each task
@@ -44,7 +44,7 @@ camera:
   # Path to save camera images
   image_path: "images/"
 
-# Robot 
+# Robot
 robot:
   # "local" with a fold name such as "demo_robot"
   # "remote" with URL such as "http://127.0.0.1:8000", and run the Python script 'skill.py' on the robot itself.
@@ -56,3 +56,12 @@ robot:
 
 # Output reasoning context, time cost and other information
 profiling: true
+
+# Optimization Configuration
+optimization:
+  enabled: true
+  short_term_capacity: 20
+  long_term_memory:
+    enabled: true
+    redis_host: "127.0.0.1"
+    redis_port: 6379

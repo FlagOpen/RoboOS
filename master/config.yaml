@@ -74,3 +74,12 @@ profiling: true
 # scene profile
 profile:
   path: ./scene/profile.yaml
+
+# Long-Term Memory Configuration
+long_term_memory:
+  enabled: false
+  redis_host: 127.0.0.1
+  redis_port: 6379
+  similarity_threshold: 0.6
+  max_historical_tasks: 3
+  filter_success_only: true
