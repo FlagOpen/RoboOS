@@ -1,0 +1,38 @@
+defaults:
+- repro_base.yaml
+- _self_
+data_source_ImplicitronDataSource_args:
+  data_loader_map_provider_SequenceDataLoaderMapProvider_args:
+    batch_size: 10
+    dataset_length_train: 1000
+    dataset_length_val: 1
+    num_workers: 8
+    train_conditioning_type: SAME
+    val_conditioning_type: SAME
+    test_conditioning_type: SAME
+    images_per_seq_options:
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  dataset_map_provider_JsonIndexDatasetMapProvider_args:
+    assert_single_seq: false
+    task_str: multisequence
+    n_frames_per_sequence: -1
+    test_on_train: true
+    test_restrict_sequence_id: 0
+optimizer_factory_ImplicitronOptimizerFactory_args:
+  multistep_lr_milestones:
+  - 1000
+training_loop_ImplicitronTrainingLoop_args:
+  max_epochs: 3000
+  evaluator_ImplicitronEvaluator_args:
+    camera_difficulty_bin_breaks:
+      - 0.666667
+      - 0.833334
+    is_multisequence: true

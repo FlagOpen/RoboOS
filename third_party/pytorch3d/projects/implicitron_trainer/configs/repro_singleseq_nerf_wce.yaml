@@ -1,0 +1,10 @@
+defaults:
+- repro_singleseq_wce_base.yaml
+- repro_feat_extractor_unnormed.yaml
+- _self_
+model_factory_ImplicitronModelFactory_args:
+  model_GenericModel_args:
+    chunk_size_grid: 16000
+    view_pooler_enabled: true
+    raysampler_AdaptiveRaySampler_args:
+      n_rays_per_image_sampled_from_mask: 850
